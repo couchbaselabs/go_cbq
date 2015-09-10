@@ -12,15 +12,16 @@ package main
 import (
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
+	"golang.org/x/crypto/ssh/terminal"
 	"io"
-	"log"
 	"os"
 	"path/filepath"
-	//"regexp"
 	"strings"
 	"time"
+	//"regexp"
 
 	"github.com/couchbaselabs/go_cbq/command"
 	_ "github.com/couchbaselabs/go_n1ql"
@@ -283,46 +284,80 @@ func main() {
 		os.Exit(0)
 	}
 
+	/* -user : Accept Admin credentials. Prompt for password and set
+	   the n1ql_creds. Append to creds so that user can also define
+	   bucket credentials using -credentials if they need to.
+	*/
+	var creds MyCred
+
+	if userFlag != "" {
+		fmt.Println("Enter Password: ")
+		password, err := terminal.ReadPassword(0)
+		if err == nil {
+			creds = append(creds, Credentials{"user": userFlag, "pass": string(password)})
+		} else {
+			s_err := handleError(err, TiServer)
+			fmt.Println(fgRed, "ERROR", s_err.Code(), ":", s_err, reset)
+			os.Exit(1)
+		}
+	}
+
 	/* -credentials : Accept credentials to pass to the n1ql endpoint.
 	   Ensure that the user inputs credentials in the form a:b.
+	   It is important to apend these credentials to those given by
+	   -user.
 	*/
-	if credsFlag == "" {
-		// Isha TODO : Check if credentials exist and then appropriately throw error.
-		fmt.Println("Empty " + credsFlag)
-	} else {
+	if userFlag == "" && credsFlag == "" {
+		/* No credentials exist. This can still be used to connect to
+		   un-authenticated servers.
+		*/
+		fmt.Println("No Input Credentials. In order to connect to a server with authentication, please provide credentials.")
+
+	} else if credsFlag != "" {
 		//Handle the input string of credentials.
 		//The string needs to be parsed into a byte array so as to pass to go_n1ql.
-		fmt.Println("Input credentials string " + credsFlag)
-
 		cred := strings.Split(credsFlag, ",")
-		//fmt.Println(cred)
-		var creds MyCred
 
+		/* Append input credentials in [{"user": <username>, "pass" : <password>}]
+		   format as expected by go_n1ql creds.
+		*/
 		for _, i := range cred {
 			up := strings.Split(i, ":")
-			//fmt.Println(up)
+			if len(up) < 2 {
+				// One of the input credentials is incorrect
+				err := errors.New("Username or Password missing in -credentials/-c option. Please check")
 
-			creds = append(creds, Credentials{"user": up[0], "pass": up[1]})
+				s_err := handleError(err, TiServer)
+				fmt.Println(fgRed, "ERROR", s_err.Code(), ":", s_err, reset)
+				os.Exit(1)
+
+			} else {
+				creds = append(creds, Credentials{"user": up[0], "pass": up[1]})
+			}
 		}
+	}
+
+	/* Add the credentials set by -user and -credentials to the
+	   go_n1ql creds parameter.
+	*/
+	if creds != nil {
+		fmt.Println("Isha Testing : ", creds)
 		ac, err := json.Marshal(creds)
-		//fmt.Println(string(ac))
-		//fmt.Println(creds)
 		if err != nil {
-			fmt.Println(err)
-			//	return
+			//Error while Marshalling
+			s_err := handleError(err, TiServer)
+			fmt.Println(fgRed, "ERROR", s_err.Code(), ":", s_err, reset)
+			os.Exit(1)
 		}
 
 		os.Setenv("n1ql_creds", string(ac))
 	}
-
-	fmt.Println("Main tiserver : " + TiServer)
 
 	HandleInteractiveMode(filepath.Base(os.Args[0]))
 }
 
 func execute_query(line string, w io.Writer) error {
 
-	var err error
 	fmt.Println("This is the execute query server tiserver : " + TiServer)
 	fmt.Println("This is the parser QUERYURL : " + QUERYURL)
 
@@ -337,43 +372,55 @@ func execute_query(line string, w io.Writer) error {
 		}
 	}
 
-	if !NoQueryService {
+	// Set query parameters
+	//fmt.Println("Timeout value :" + timeoutFlag.String())
+	//os.Setenv("n1ql_timeout", timeoutFlag.String())
 
-		// Set query parameters
-		//fmt.Println("Timeout value :" + timeoutFlag.String())
-		//os.Setenv("n1ql_timeout", timeoutFlag.String())
-		if strings.HasPrefix(line, "\\") == true {
-			err = ShellCommandParser(line)
-
-		} else {
-			fmt.Println(NoQueryService)
-			n1ql, err := sql.Open("n1ql", TiServer)
-			if err != nil {
-
-				//log.Fatal(err)
-				fmt.Println("Error in sql Open")
-			} else {
-				fmt.Println("successfully logged")
-			}
-
-			err = n1ql.Ping()
-			if err != nil {
-				//log.Fatal(err)
-				fmt.Println("Error in sql Ping")
-			} else {
-				fmt.Println("successfully pinged")
-			}
-			err = N1QLCommandParser(line, n1ql, w)
-		}
+	if strings.HasPrefix(line, "\\") == true {
+		err := ShellCommandParser(line)
 		if err != nil {
-			//log.Fatal(err)
-			fmt.Println("Error in N1QLCOmmandParser or ShellCommandParser")
+			s_err := handleError(err, TiServer)
+			fmt.Println(fgRed, "ERROR", s_err.Code(), ":", s_err, reset)
 		}
 
 	} else {
-		//Isha TODO : Add this to the error handling. This is temporary until the \CONNECT command is implemented.
-		io.WriteString(w, "\nNot connected to any instance. Use \\CONNECT shell command to connect to an instance.\n")
+		// If connected to a query service then NoQueryService == false.
+		if !NoQueryService {
+			/* Try opening a connection to the endpoint. If successful, ping.
+			   If successful execute the n1ql command. Else try to connect
+			   again.
+			*/
+			n1ql, err := sql.Open("n1ql", TiServer)
+			if err != nil {
+				s_err := handleError(err, TiServer)
+				fmt.Println(fgRed, "ERROR", s_err.Code(), ":", s_err, reset)
+				//fmt.Println(fgRed, "Error in sql Open", reset)
+			} else {
+				fmt.Println("Successfully logged into " + TiServer)
+				err = n1ql.Ping()
+				if err != nil {
+					s_err := handleError(err, TiServer)
+					fmt.Println(fgRed, "ERROR", s_err.Code(), ":", s_err, reset)
+					//fmt.Println(fgRed, "Error in sql Ping", reset)
+				} else {
+					//fmt.Println("Successfully Pinged " + TiServer)
+
+					err := N1QLCommandParser(line, n1ql, w)
+					if err != nil {
+						s_err := handleError(err, TiServer)
+						fmt.Println(fgRed, "ERROR", s_err.Code(), ":", s_err, reset)
+					}
+				}
+			}
+
+		} else {
+			//Not connected to a query service
+			err := errors.New("Not connected to any instance. Use \\CONNECT shell command to connect to an instance.")
+			s_err := handleError(err, TiServer)
+			fmt.Println(fgRed, "ERROR", s_err.Code(), ":", s_err, reset)
+		}
 	}
+
 	return nil
 }
 
@@ -381,28 +428,29 @@ func N1QLCommandParser(line string, n1ql *sql.DB, w io.Writer) error {
 	rows, err := n1ql.Query(line)
 
 	if err != nil {
-		//log.Fatal(err)
-		fmt.Println("Error in n1ql.Query")
-		log.Print("Weeeee  ", err)
+		return err
 
 	} else {
-
-		defer rows.Close()
 		iter := 0
-		io.WriteString(w, "\n \"results\" :  [ ")
+
+		var werr error
+		_, werr = io.WriteString(w, "\n \"results\" :  [ ")
+
 		for rows.Next() {
 			var results *json.RawMessage
-			//var results string
+
 			if iter == 0 {
 				iter++
 			} else {
-				io.WriteString(w, ",")
-				io.WriteString(w, "\n")
+				_, werr = io.WriteString(w, ", \n")
 			}
 			if err := rows.Scan(&results); err != nil {
 				return err
 			}
-			b, _ := results.MarshalJSON()
+			b, err := results.MarshalJSON()
+			if err != nil {
+				return err
+			}
 			var dat map[string]interface{}
 			if err := json.Unmarshal(b, &dat); err != nil {
 				return err
@@ -414,10 +462,19 @@ func N1QLCommandParser(line string, n1ql *sql.DB, w io.Writer) error {
 				}
 			}
 
-			io.WriteString(w, string(b))
-
+			_, werr = io.WriteString(w, string(b))
 		}
-		io.WriteString(w, " ] \n")
+		err = rows.Close()
+		if err != nil {
+			return err
+		}
+
+		_, werr = io.WriteString(w, " ] \n")
+
+		// For any captured write error
+		if werr != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -427,45 +484,21 @@ func ShellCommandParser(line string) error {
 
 	line = strings.ToLower(line)
 
-	/*if strings.HasPrefix(line, "\\connect") {
-			cmd_args := strings.Split(line, " ")
-			&Connect{}.ParseCommand(cmd_args)
-	}
-	if strings.HasPrefix(line, "\\disconnect") {
-
-	}*/
-
 	cmd_args := strings.Split(line, " ")
 
 	//Lookup Command from function registry
-	//Cmd = cmd_args[0]
 
 	var err error
 
 	Cmd, ok := command.COMMAND_LIST[cmd_args[0]]
 	if ok == true {
 		err = Cmd.ParseCommand(cmd_args[1:])
+		if err != nil {
+			return err
+		}
 	} else {
 		fmt.Println("Command doesnt exist. Use help for command help.")
 	}
-
-	/*if strings.HasPrefix(line, "\\connect") {
-		Cmd := command.Connect{}
-		err = Cmd.ParseCommand(cmd_args[1:])
-
-	} else if strings.HasPrefix(line, "\\disconnect") {
-		Cmd := command.Disconnect{}
-		err = Cmd.ParseCommand(cmd_args[1:])
-
-	} else if strings.HasPrefix(line, "\\help") {
-		Cmd := command.Help{}
-		err = Cmd.ParseCommand(cmd_args[1:])
-
-	} else if strings.HasPrefix(line, "\\version") {
-		Cmd := command.Version{}
-		err = Cmd.ParseCommand(cmd_args[1:])
-
-	}*/
 
 	QUERYURL = command.QUERYURL
 
@@ -482,5 +515,5 @@ func ShellCommandParser(line string) error {
 	}
 
 	EXIT = command.EXIT
-	return err
+	return nil
 }
