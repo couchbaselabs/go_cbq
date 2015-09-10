@@ -18,11 +18,11 @@ import (
 	"log"
 	"os"
 	"path/filepath"
-	"regexp"
+	//"regexp"
 	"strings"
 	"time"
 
-	"github.com/couchbase/query/shell/cbq/command"
+	"github.com/couchbaselabs/go_cbq/command"
 	_ "github.com/couchbaselabs/go_n1ql"
 )
 
@@ -133,7 +133,7 @@ var versionFlag bool
 
 func init() {
 	const (
-		usage = "Shell Version \n\t -version"
+		usage = "Shell Version \n\t Usage: -version"
 	)
 	flag.BoolVar(&versionFlag, "version", false, usage)
 	flag.BoolVar(&versionFlag, "v", false, "Shorthand for -version")
@@ -151,7 +151,7 @@ var scriptFlag string
 func init() {
 	const (
 		defaultval = ""
-		usage      = "Single command mode. Execute input command and exit shell. \n\t -script=\"select * from system:keyspaces\""
+		usage      = "Single command mode. Execute input command and exit shell. \n\t For Example : -script=\"select * from system:keyspaces\""
 	)
 	flag.StringVar(&scriptFlag, "script", defaultval, usage)
 	flag.StringVar(&scriptFlag, "s", defaultval, " Shorthand for -script")
@@ -159,27 +159,38 @@ func init() {
 }
 
 /*
-   Option        : -prompt
-   Args          : <character>
-   Default value : ">"
-   Query prompt character.
-*/
-
-var promptFlag = flag.String("prompt", ">", "Set the character for the command prompt")
-
-/*
    Option        : -pretty
    Default value : false
    Pretty print output
 */
 
-var prettyFlag = flag.Bool("pretty", false, "Set the character for the command prompt")
+var prettyFlag = flag.Bool("pretty", false, "Pretty print the output.")
+
+/*
+   Option        : -exit-on-error
+   Default value : false
+   Exit shell after first error encountered.
+*/
+
+var errorExitFlag = flag.Bool("exit-on-error", false, "Exit shell after first error encountered.")
 
 /*
    Option        : -file or -f
    Args          : <filename>
    Input file to run queries from. Exit after the queries are run.
 */
+
+var inputFlag string
+
+func init() {
+	const (
+		defaultval = ""
+		usage      = "File to load commands from. \n\t For Example : -file=temp.txt"
+	)
+	flag.StringVar(&scriptFlag, "file", defaultval, usage)
+	flag.StringVar(&scriptFlag, "f", defaultval, " Shorthand for -file")
+
+}
 
 /*
    Option        : -ouput or -o
@@ -192,7 +203,7 @@ var outputFlag string
 func init() {
 	const (
 		defaultval = ""
-		usage      = "File to output commands and their results. \n\t -output=temp.txt"
+		usage      = "File to output commands and their results. \n\t For Example : -output=temp.txt"
 	)
 	flag.StringVar(&scriptFlag, "output", defaultval, usage)
 	flag.StringVar(&scriptFlag, "o", defaultval, " Shorthand for -output")
@@ -205,69 +216,76 @@ func init() {
    Log commands for session.
 */
 
+var logFlag string
+
+func init() {
+	const (
+		defaultval = ""
+		usage      = "File to log commands into. \n\t For Example : -log-file=temp.txt"
+	)
+	flag.StringVar(&scriptFlag, "log-file", defaultval, usage)
+	flag.StringVar(&scriptFlag, "l", defaultval, " Shorthand for -log-file")
+
+}
+
+/* Define credentials as user/pass and convert into
+   JSON object credentials
+*/
 type Credentials map[string]string
 type MyCred []Credentials
-
-var in int
 
 var (
 	QUERYURL   string
 	DISCONNECT bool
+	EXIT       bool
 )
 
 func main() {
 
-	//QUERYURL = command.QUERYURL
-
 	flag.Parse()
-
-	// Check if the Connect command has been issued and
-	// what the new url to connect to is.
-
-	/*if QUERYURL != "" {
-		TiServer = QUERYURL
-	}*/
-
-	fmt.Println("Came in here no : ", in)
-	in = in + 1
 
 	/* Handle options and what they should do */
 
-	if strings.Contains(TiServer, ":8091") == false &&
-		strings.Contains(TiServer, ":9000") == false &&
-		strings.Contains(TiServer, ":8093") == false &&
-		strings.Contains(TiServer, ":9499") == false {
-
-		if strings.HasSuffix(TiServer, ":") == false {
-			TiServer = TiServer + ":8091"
-		} else {
-			TiServer = TiServer + "8091"
+	// TODO : Readd ...
+	//Taken out so as to connect to both cluster and query service
+	//using go_n1ql.
+	/*
+		if strings.HasPrefix(TiServer, "http://") == false {
+			TiServer = "http://" + TiServer
 		}
 
-	}
+		urlRegex := "^(https?://)[-a-zA-Z0-9+&@#/%?=~_|!:,.;]*[-a-zA-Z0-9+&@#/%=~_|]"
+		match, _ := regexp.MatchString(urlRegex, TiServer)
+		if match == false {
+			//TODO Isha : Add error code. Throw invalid url error
+			fmt.Println("Invalid url please check" + TiServer)
+		}
 
-	if strings.HasPrefix(TiServer, "http://") == false {
-		TiServer = "http://" + TiServer
-	}
 
-	urlRegex := "^(https?://)[-a-zA-Z0-9+&@#/%?=~_|!:,.;]*[-a-zA-Z0-9+&@#/%=~_|]"
-	match, _ := regexp.MatchString(urlRegex, TiServer)
-	if match == false {
-		//TODO Isha : Add error code. Throw invalid url error
-		fmt.Println("Invalid url please check" + TiServer)
-	}
+		//-engine
+		if strings.HasSuffix(TiServer, "/") == false {
+			TiServer = TiServer + "/"
+		}
+	*/
 
-	//-engine
-	if strings.HasSuffix(TiServer, "/") == false {
-		TiServer = TiServer + "/"
-	}
-
-	//-quiet
+	/* -quiet : Display Message only if flag not specified
+	 */
 	if !*quietFlag {
 		fmt.Printf("Couchbase query shell connected to %v . Type Ctrl-D to exit.\n", TiServer)
 	}
 
-	//-credentials
+	/* -version : Display the version of the shell and then exit.
+	 */
+	if versionFlag == true {
+		dummy := []string{}
+		cmd := command.Version{}
+		_ = cmd.ParseCommand(dummy)
+		os.Exit(0)
+	}
+
+	/* -credentials : Accept credentials to pass to the n1ql endpoint.
+	   Ensure that the user inputs credentials in the form a:b.
+	*/
 	if credsFlag == "" {
 		// Isha TODO : Check if credentials exist and then appropriately throw error.
 		fmt.Println("Empty " + credsFlag)
@@ -304,12 +322,13 @@ func main() {
 
 func execute_query(line string, w io.Writer) error {
 
+	var err error
 	fmt.Println("This is the execute query server tiserver : " + TiServer)
 	fmt.Println("This is the parser QUERYURL : " + QUERYURL)
 
 	fmt.Println("IMP DISCONNECT : ", DISCONNECT, " IMP Noqueryservice :", NoQueryService)
 
-	if DISCONNECT == true {
+	if DISCONNECT == true || NoQueryService == true {
 		fmt.Println("LINE : "+line+"   NoQ: ", NoQueryService)
 		if strings.HasPrefix(strings.ToLower(line), "\\connect") {
 			NoQueryService = false
@@ -320,23 +339,6 @@ func execute_query(line string, w io.Writer) error {
 
 	if !NoQueryService {
 
-		fmt.Println(NoQueryService)
-		n1ql, err := sql.Open("n1ql", TiServer)
-		if err != nil {
-			//log.Fatal(err)
-			fmt.Println("Error in sql Open")
-		} else {
-			fmt.Println("successfully logged")
-		}
-
-		err = n1ql.Ping()
-		if err != nil {
-			//log.Fatal(err)
-			fmt.Println("Error in sql Ping")
-		} else {
-			fmt.Println("successfully pinged")
-		}
-
 		// Set query parameters
 		//fmt.Println("Timeout value :" + timeoutFlag.String())
 		//os.Setenv("n1ql_timeout", timeoutFlag.String())
@@ -344,6 +346,23 @@ func execute_query(line string, w io.Writer) error {
 			err = ShellCommandParser(line)
 
 		} else {
+			fmt.Println(NoQueryService)
+			n1ql, err := sql.Open("n1ql", TiServer)
+			if err != nil {
+
+				//log.Fatal(err)
+				fmt.Println("Error in sql Open")
+			} else {
+				fmt.Println("successfully logged")
+			}
+
+			err = n1ql.Ping()
+			if err != nil {
+				//log.Fatal(err)
+				fmt.Println("Error in sql Ping")
+			} else {
+				fmt.Println("successfully pinged")
+			}
 			err = N1QLCommandParser(line, n1ql, w)
 		}
 		if err != nil {
@@ -370,6 +389,7 @@ func N1QLCommandParser(line string, n1ql *sql.DB, w io.Writer) error {
 
 		defer rows.Close()
 		iter := 0
+		io.WriteString(w, "\n \"results\" :  [ ")
 		for rows.Next() {
 			var results *json.RawMessage
 			//var results string
@@ -387,16 +407,17 @@ func N1QLCommandParser(line string, n1ql *sql.DB, w io.Writer) error {
 			if err := json.Unmarshal(b, &dat); err != nil {
 				return err
 			}
-			c, err := json.MarshalIndent(dat, "", "  ")
-			if err != nil {
-				return err
+			if *prettyFlag {
+				b, err = json.MarshalIndent(dat, "", "  ")
+				if err != nil {
+					return err
+				}
 			}
-			//reader := bytes.NewReader(c)
-			//io.Copy(w, reader)
-			io.WriteString(w, string(c))
-			//io.WriteString(w, ",")
+
+			io.WriteString(w, string(b))
+
 		}
-		io.WriteString(w, "\n")
+		io.WriteString(w, " ] \n")
 	}
 
 	return nil
@@ -421,13 +442,20 @@ func ShellCommandParser(line string) error {
 
 	var err error
 
-	if strings.HasPrefix(line, "\\connect") {
+	Cmd, ok := command.COMMAND_LIST[cmd_args[0]]
+	if ok == true {
+		err = Cmd.ParseCommand(cmd_args[1:])
+	} else {
+		fmt.Println("Command doesnt exist. Use help for command help.")
+	}
+
+	/*if strings.HasPrefix(line, "\\connect") {
 		Cmd := command.Connect{}
 		err = Cmd.ParseCommand(cmd_args[1:])
 
 	} else if strings.HasPrefix(line, "\\disconnect") {
 		Cmd := command.Disconnect{}
-		err = Cmd.ParseCommand(nil)
+		err = Cmd.ParseCommand(cmd_args[1:])
 
 	} else if strings.HasPrefix(line, "\\help") {
 		Cmd := command.Help{}
@@ -435,11 +463,12 @@ func ShellCommandParser(line string) error {
 
 	} else if strings.HasPrefix(line, "\\version") {
 		Cmd := command.Version{}
-		err = Cmd.ParseCommand()
+		err = Cmd.ParseCommand(cmd_args[1:])
 
-	}
+	}*/
 
 	QUERYURL = command.QUERYURL
+
 	if QUERYURL != "" {
 		TiServer = QUERYURL
 		command.QUERYURL = ""
@@ -452,5 +481,6 @@ func ShellCommandParser(line string) error {
 
 	}
 
+	EXIT = command.EXIT
 	return err
 }

@@ -14,43 +14,46 @@ import (
 	"fmt"
 )
 
-/* Version Command */
-type Version struct {
+/* Exit and Quit Commands */
+type ExitorQuit struct {
 	ShellCommand
 }
 
-func (this *Version) Name() string {
-	return "VERSION"
+func (this *ExitorQuit) Name() string {
+	return "EXIT"
 }
 
-func (this *Version) CommandCompletion() bool {
+func (this *ExitorQuit) CommandCompletion() bool {
 	return false
 }
 
-func (this *Version) MinArgs() int {
+func (this *ExitorQuit) MinArgs() int {
 	return 0
 }
 
-func (this *Version) MaxArgs() int {
+func (this *ExitorQuit) MaxArgs() int {
 	return 0
 }
 
-func (this *Version) ParseCommand(queryurl []string) error {
-	/* Print the shell version. If the command contains an input
-	   argument then throw an error.
+func (this *ExitorQuit) ParseCommand(queryurl []string) error {
+	/* Command to Exit the shell. We set the EXIT flag to true.
+	Once this command is processed, and executequery returns to
+	HandleInteractiveMode, handle errors (if any) and then exit
+	with the correct exit status. If the command contains an
+	input argument then throw an error.
 	*/
 	if len(queryurl) != 0 {
 		return errors.New("Too many arguments")
 	} else {
-		fmt.Println("SHELL VERSION : " + SHELL_VERSION)
-		fmt.Println("Use N1QL commands select version() or select min_version() to display server version.")
+		fmt.Println("\n Exiting the shell.")
+		EXIT = true
 	}
 	return nil
 }
 
-func (this *Version) PrintHelp() {
-	fmt.Println("\\VERSION")
-	fmt.Println("Print the Shell Version")
-	fmt.Println(" For Example : \n\t \\VERSION;")
+func (this *ExitorQuit) PrintHelp() {
+	fmt.Println("\\EXIT; OR QUIT;")
+	fmt.Println("Exit the shell")
+	fmt.Println(" For Example : \n\t \\EXIT; \n\t \\QUIT;")
 	fmt.Println()
 }

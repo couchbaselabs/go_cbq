@@ -12,25 +12,35 @@ package main
 import (
 	"fmt"
 	"os"
-	"os/signal"
+	//"os/signal"
 	"strings"
-	"syscall"
+	//"syscall"
 
 	"github.com/couchbase/query/errors"
-	//wordwrap "github.com/kr/text"
+	"github.com/couchbaselabs/go_cbq/command"
 	"github.com/sbinet/liner"
 )
 
+/* The following values define the query prompt for cbq.
+   The expected end of line character is a ;.
+*/
 const (
 	QRY_EOL     = ";"
 	QRY_PROMPT1 = "> "
 	QRY_PROMPT2 = "   > "
 )
 
-var once = 0
+/* The following variables are used to display the error
+   messages in red text and then reset the terminal prompt
+   color.
+*/
 var reset = "\x1b[0m"
 var fgRed = "\x1b[31m"
 
+/* The handleError method creates the error using the methods
+   defined in the n1ql errors package. This is where all the
+   shell errors are handled.
+*/
 func handleError(err error, tiServer string) errors.Error {
 
 	if strings.Contains(strings.ToLower(err.Error()), "connection refused") {
@@ -54,24 +64,36 @@ func handleError(err error, tiServer string) errors.Error {
 	}
 }
 
+/* This method is used to handle user interaction with the
+   cli. After combining the multi line input, it is sent to
+   the executequery method which parses and executes the
+   input command. In the event an error is returned from the
+   query execution, it is printed in red. The input prompt is
+   the name of the executable.
+*/
 func HandleInteractiveMode(prompt string) {
 
 	fmt.Println("Interactive tiserver : " + TiServer)
 
-	fmt.Println(prompt)
-	// try to find a HOME environment variable
+	/* Find the HOME environment variable. If it isnt set then
+	   try USERPROFILE for windows. If neither is found then
+	   the cli cant find the history file to read from.
+	*/
 	homeDir := os.Getenv("HOME")
 	if homeDir == "" {
-		// then try USERPROFILE for Windows
 		homeDir = os.Getenv("USERPROFILE")
 		if homeDir == "" {
 			fmt.Printf("Unable to determine home directory, history file disabled\n")
 		}
 	}
 
+	/* Create a new liner */
 	var liner = liner.NewLiner()
 	defer liner.Close()
 
+	/* Load history from Home directory
+	   TODO : Once Histfile and Histsize are introduced then change this code
+	*/
 	LoadHistory(liner, homeDir)
 
 	go signalCatcher(liner)
@@ -94,24 +116,43 @@ func HandleInteractiveMode(prompt string) {
 		fullPrompt = QRY_PROMPT2
 		queryLines = append(queryLines, line)
 
-		// If the current line ends with a QRY_EOL, join all query lines,
-		// trim off trailing QRY_EOL characters, and submit the query string:
+		/* If the current line ends with a QRY_EOL, join all query lines,
+		   trim off trailing QRY_EOL characters, and submit the query string.
+		*/
 		if strings.HasSuffix(line, QRY_EOL) {
 			queryString := strings.Join(queryLines, " ")
 			for strings.HasSuffix(queryString, QRY_EOL) {
 				queryString = strings.TrimSuffix(queryString, QRY_EOL)
 			}
 			if queryString != "" {
-				//queryString = wordwrap.Wrap(queryString, 10)
 				UpdateHistory(liner, homeDir, queryString+QRY_EOL)
-				fmt.Println("Called Isha ", once)
-				once = once + 1
 				err = execute_query(queryString, os.Stdout)
+				/* Error handling for Shell errors and errors recieved from
+				   go_n1ql.
+				*/
 				if err != nil {
 					s_err := handleError(err, TiServer)
 					fmt.Println(fgRed, "ERROR", s_err.Code(), ":", s_err, reset)
 				}
+
+				/* For the \EXIT and \QUIT shell commands we need to
+				   make sure that we close the liner and then exit. In
+				   the event an error is returned from executequery after
+				   the \EXIT command, then handle the error and exit with
+				   exit code 1 (which is for general errors).
+				*/
+				if EXIT == true && err == nil {
+					command.EXIT = false
+					liner.Close()
+					os.Exit(0)
+				} else if EXIT == true && err != nil {
+					command.EXIT = false
+					liner.Close()
+					os.Exit(1)
+				}
+
 			}
+
 			// reset state for multi-line query
 			queryLines = []string{}
 			fullPrompt = prompt + QRY_PROMPT1
@@ -120,14 +161,10 @@ func HandleInteractiveMode(prompt string) {
 
 }
 
-/**
- *  Attempt to clean up after ctrl-C otherwise
- *  terminal is left in bad shape
- */
+/* If ^C is pressed then Abort the shell. This is
+   provided by the liner package.
+*/
 func signalCatcher(liner *liner.State) {
-	ch := make(chan os.Signal)
-	signal.Notify(ch, syscall.SIGINT)
-	<-ch
-	liner.Close()
-	os.Exit(0)
+	liner.SetCtrlCAborts(false)
+
 }
