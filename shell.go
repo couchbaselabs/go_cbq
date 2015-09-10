@@ -358,11 +358,6 @@ func main() {
 
 func execute_query(line string, w io.Writer) error {
 
-	fmt.Println("This is the execute query server tiserver : " + TiServer)
-	fmt.Println("This is the parser QUERYURL : " + QUERYURL)
-
-	fmt.Println("IMP DISCONNECT : ", DISCONNECT, " IMP Noqueryservice :", NoQueryService)
-
 	if DISCONNECT == true || NoQueryService == true {
 		fmt.Println("LINE : "+line+"   NoQ: ", NoQueryService)
 		if strings.HasPrefix(strings.ToLower(line), "\\connect") {
