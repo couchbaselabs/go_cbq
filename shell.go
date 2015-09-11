@@ -294,7 +294,13 @@ func main() {
 		fmt.Println("Enter Password: ")
 		password, err := terminal.ReadPassword(0)
 		if err == nil {
-			creds = append(creds, Credentials{"user": userFlag, "pass": string(password)})
+			if string(password) == "" {
+				s_err := handleError(errors.New("Endered empty password string."), TiServer)
+				fmt.Println(fgRed, "ERROR", s_err.Code(), ":", s_err, reset)
+				os.Exit(1)
+			} else {
+				creds = append(creds, Credentials{"user": userFlag, "pass": string(password)})
+			}
 		} else {
 			s_err := handleError(err, TiServer)
 			fmt.Println(fgRed, "ERROR", s_err.Code(), ":", s_err, reset)
@@ -341,7 +347,6 @@ func main() {
 	   go_n1ql creds parameter.
 	*/
 	if creds != nil {
-		fmt.Println("Isha Testing : ", creds)
 		ac, err := json.Marshal(creds)
 		if err != nil {
 			//Error while Marshalling
@@ -359,7 +364,6 @@ func main() {
 func execute_query(line string, w io.Writer) error {
 
 	if DISCONNECT == true || NoQueryService == true {
-		fmt.Println("LINE : "+line+"   NoQ: ", NoQueryService)
 		if strings.HasPrefix(strings.ToLower(line), "\\connect") {
 			NoQueryService = false
 			command.DISCONNECT = false
@@ -389,16 +393,16 @@ func execute_query(line string, w io.Writer) error {
 			if err != nil {
 				s_err := handleError(err, TiServer)
 				fmt.Println(fgRed, "ERROR", s_err.Code(), ":", s_err, reset)
-				//fmt.Println(fgRed, "Error in sql Open", reset)
+				fmt.Println(fgRed, "Error in sql Open", reset)
 			} else {
-				fmt.Println("Successfully logged into " + TiServer)
+				//Successfully logged into the server
 				err = n1ql.Ping()
 				if err != nil {
 					s_err := handleError(err, TiServer)
 					fmt.Println(fgRed, "ERROR", s_err.Code(), ":", s_err, reset)
-					//fmt.Println(fgRed, "Error in sql Ping", reset)
+					fmt.Println(fgRed, "Error in sql Ping", reset)
 				} else {
-					//fmt.Println("Successfully Pinged " + TiServer)
+					//fSuccessfully Pinged
 
 					err := N1QLCommandParser(line, n1ql, w)
 					if err != nil {
@@ -420,55 +424,63 @@ func execute_query(line string, w io.Writer) error {
 }
 
 func N1QLCommandParser(line string, n1ql *sql.DB, w io.Writer) error {
-	rows, err := n1ql.Query(line)
-
-	if err != nil {
-		return err
-
-	} else {
-		iter := 0
-
-		var werr error
-		_, werr = io.WriteString(w, "\n \"results\" :  [ ")
-
-		for rows.Next() {
-			var results *json.RawMessage
-
-			if iter == 0 {
-				iter++
-			} else {
-				_, werr = io.WriteString(w, ", \n")
-			}
-			if err := rows.Scan(&results); err != nil {
-				return err
-			}
-			b, err := results.MarshalJSON()
-			if err != nil {
-				return err
-			}
-			var dat map[string]interface{}
-			if err := json.Unmarshal(b, &dat); err != nil {
-				return err
-			}
-			if *prettyFlag {
-				b, err = json.MarshalIndent(dat, "", "  ")
-				if err != nil {
-					return err
-				}
-			}
-
-			_, werr = io.WriteString(w, string(b))
-		}
-		err = rows.Close()
+	if strings.HasPrefix(strings.ToLower(line), "create") {
+		_, err := n1ql.Exec(line)
 		if err != nil {
 			return err
 		}
+	} else {
 
-		_, werr = io.WriteString(w, " ] \n")
+		rows, err := n1ql.Query(line)
 
-		// For any captured write error
-		if werr != nil {
+		if err != nil {
 			return err
+
+		} else {
+			iter := 0
+
+			var werr error
+			_, werr = io.WriteString(w, "\n \"results\" :  [ ")
+
+			for rows.Next() {
+				var results *json.RawMessage
+
+				if iter == 0 {
+					iter++
+				} else {
+					_, werr = io.WriteString(w, ", \n")
+				}
+				if err := rows.Scan(&results); err != nil {
+					return err
+				}
+				b, err := results.MarshalJSON()
+				if err != nil {
+					return err
+				}
+				var dat map[string]interface{}
+				if err := json.Unmarshal(b, &dat); err != nil {
+					return err
+				}
+				if *prettyFlag {
+					b, err = json.MarshalIndent(dat, "", "  ")
+					if err != nil {
+						return err
+					}
+				}
+
+				_, werr = io.WriteString(w, string(b))
+			}
+			err = rows.Close()
+			if err != nil {
+				return err
+			}
+
+			_, werr = io.WriteString(w, " ] \n")
+
+			// For any captured write error
+			if werr != nil {
+				return err
+			}
 		}
 	}
 
@@ -478,6 +490,7 @@ func N1QLCommandParser(line string, n1ql *sql.DB, w io.Writer) error {
 func ShellCommandParser(line string) error {
 
 	line = strings.ToLower(line)
+	line = strings.TrimSpace(line)
 
 	cmd_args := strings.Split(line, " ")
 
@@ -492,7 +505,7 @@ func ShellCommandParser(line string) error {
 			return err
 		}
 	} else {
-		fmt.Println("Command doesnt exist. Use help for command help.")
+		return errors.New("Command doesnt exist. Use help for command help.")
 	}
 
 	QUERYURL = command.QUERYURL

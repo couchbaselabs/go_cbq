@@ -12,9 +12,7 @@ package main
 import (
 	"fmt"
 	"os"
-	//"os/signal"
 	"strings"
-	//"syscall"
 
 	"github.com/couchbase/query/errors"
 	"github.com/couchbaselabs/go_cbq/command"
@@ -72,8 +70,6 @@ func handleError(err error, tiServer string) errors.Error {
    the name of the executable.
 */
 func HandleInteractiveMode(prompt string) {
-
-	fmt.Println("Interactive tiserver : " + TiServer)
 
 	/* Find the HOME environment variable. If it isnt set then
 	   try USERPROFILE for windows. If neither is found then
