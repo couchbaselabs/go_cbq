@@ -34,6 +34,7 @@ const (
 */
 var reset = "\x1b[0m"
 var fgRed = "\x1b[31m"
+var first = false
 
 /* The handleError method creates the error using the methods
    defined in the n1ql errors package. This is where all the
@@ -108,6 +109,14 @@ func HandleInteractiveMode(prompt string) {
 			continue
 		}
 
+		/* Check for shell comments : -- and #. Add them to the history
+		   but do not send them to be parsed.
+		*/
+		if strings.HasPrefix(line, "--") || strings.HasPrefix(line, "#") {
+			UpdateHistory(liner, homeDir, line)
+			continue
+		}
+
 		// Building query string mode: set prompt, gather current line
 		fullPrompt = QRY_PROMPT2
 		queryLines = append(queryLines, line)
@@ -129,6 +138,15 @@ func HandleInteractiveMode(prompt string) {
 				if err != nil {
 					s_err := handleError(err, TiServer)
 					fmt.Println(fgRed, "ERROR", s_err.Code(), ":", s_err, reset)
+					if *errorExitFlag == true {
+						if first == false {
+							first = true
+							fmt.Println("Exiting on first error encountered")
+							liner.Close()
+							os.Clearenv()
+							os.Exit(1)
+						}
+					}
 				}
 
 				/* For the \EXIT and \QUIT shell commands we need to

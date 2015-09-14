@@ -165,7 +165,7 @@ func init() {
    Pretty print output
 */
 
-var prettyFlag = flag.Bool("pretty", false, "Pretty print the output.")
+var prettyFlag = flag.Bool("pretty", true, "Pretty print the output.")
 
 /*
    Option        : -exit-on-error
@@ -244,6 +244,15 @@ var (
 func main() {
 
 	flag.Parse()
+
+	if scriptFlag != "" {
+		err := execute_query(scriptFlag, os.Stdout)
+		if err != nil {
+			s_err := handleError(err, TiServer)
+			fmt.Println(fgRed, "ERROR", s_err.Code(), ":", s_err, reset)
+		}
+		os.Exit(1)
+	}
 
 	/* Handle options and what they should do */
 
@@ -358,6 +367,7 @@ func main() {
 		os.Setenv("n1ql_creds", string(ac))
 	}
 
+	fmt.Println("Input arguments, ", os.Args)
 	HandleInteractiveMode(filepath.Base(os.Args[0]))
 }
 
@@ -378,8 +388,7 @@ func execute_query(line string, w io.Writer) error {
 	if strings.HasPrefix(line, "\\") == true {
 		err := ShellCommandParser(line)
 		if err != nil {
-			s_err := handleError(err, TiServer)
-			fmt.Println(fgRed, "ERROR", s_err.Code(), ":", s_err, reset)
+			return err
 		}
 
 	} else {
@@ -391,23 +400,21 @@ func execute_query(line string, w io.Writer) error {
 			*/
 			n1ql, err := sql.Open("n1ql", TiServer)
 			if err != nil {
-				s_err := handleError(err, TiServer)
-				fmt.Println(fgRed, "ERROR", s_err.Code(), ":", s_err, reset)
 				fmt.Println(fgRed, "Error in sql Open", reset)
+				return err
 			} else {
 				//Successfully logged into the server
 				err = n1ql.Ping()
 				if err != nil {
-					s_err := handleError(err, TiServer)
-					fmt.Println(fgRed, "ERROR", s_err.Code(), ":", s_err, reset)
 					fmt.Println(fgRed, "Error in sql Ping", reset)
+					return err
+
 				} else {
 					//fSuccessfully Pinged
 
 					err := N1QLCommandParser(line, n1ql, w)
 					if err != nil {
-						s_err := handleError(err, TiServer)
-						fmt.Println(fgRed, "ERROR", s_err.Code(), ":", s_err, reset)
+						return err
 					}
 				}
 			}
@@ -415,8 +422,7 @@ func execute_query(line string, w io.Writer) error {
 		} else {
 			//Not connected to a query service
 			err := errors.New("Not connected to any instance. Use \\CONNECT shell command to connect to an instance.")
-			s_err := handleError(err, TiServer)
-			fmt.Println(fgRed, "ERROR", s_err.Code(), ":", s_err, reset)
+			return err
 		}
 	}
 
@@ -457,11 +463,13 @@ func N1QLCommandParser(line string, n1ql *sql.DB, w io.Writer) error {
 				if err != nil {
 					return err
 				}
-				var dat map[string]interface{}
-				if err := json.Unmarshal(b, &dat); err != nil {
-					return err
-				}
-				if *prettyFlag {
+
+				if *prettyFlag == true {
+					var dat map[string]interface{}
+					if err := json.Unmarshal(b, &dat); err != nil {
+						return err
+					}
+
 					b, err = json.MarshalIndent(dat, "", "  ")
 					if err != nil {
 						return err
