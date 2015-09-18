@@ -32,6 +32,13 @@ var COMMAND_LIST = map[string]ShellCommand{
 	"\\help":      &Help{},
 	"\\version":   &Version{},
 	"\\copyright": &Copyright{},
+
+	/* Session Management */
+	"\\set":  &Set{},
+	"\\push": &Push{},
+	//"\\pop": &Pop{},
+	//"\\unset": &Unset{},
+
 }
 
 /*
