@@ -189,7 +189,7 @@ func (stack *Stack) Top() (val value.Value, err error) {
 
 func (stack *Stack) SetTop(v value.Value) (err error) {
 	if stack.Len() == 0 {
-		err = errors.New("Stack is Empty. Please use \\PUSH")
+		fmt.Println(errors.New("Stack is Empty. Please use \\PUSH"))
 	} else {
 		x := stack.Len() - 1
 		(*stack)[x] = v

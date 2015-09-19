@@ -21,7 +21,7 @@ type Set struct {
 }
 
 func (this *Set) Name() string {
-	return "CONNECT"
+	return "SET"
 }
 
 func (this *Set) CommandCompletion() bool {
@@ -51,13 +51,22 @@ func (this *Set) ParseCommand(queryurl []string) error {
 		//Check what kind of parameter needs to be set.
 		// For query parameters
 		if strings.HasPrefix(queryurl[0], "-") {
+
 			vble := queryurl[0]
 			vble = vble[1:]
-			QueryParam[vble] = Stack_Helper()
-			v, _ := Resolve(queryurl[1])
-			QueryParam[vble].Push(v)
+
+			st_val, ok := QueryParam[vble]
+			if ok {
+				v, _ := Resolve(queryurl[1])
+				st_val.SetTop(v)
+
+			} else {
+				err := errors.New("Need to use \\PUSH to push 1st value")
+				return err
+			}
+
 			//tmp, _ := QueryParam[vble].Top()
-			fmt.Println(QueryParam)
+			fmt.Println(*QueryParam[vble])
 
 		} else if strings.HasPrefix(queryurl[0], "$") {
 			// For User defined session variables

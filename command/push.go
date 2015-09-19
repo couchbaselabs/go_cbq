@@ -51,14 +51,23 @@ func (this *Push) ParseCommand(queryurl []string) error {
 		//Check what kind of parameter needs to be set.
 		// For query parameters
 		if strings.HasPrefix(queryurl[0], "-") {
+
 			vble := queryurl[0]
 			vble = vble[1:]
-			QueryParam[vble] = Stack_Helper()
-			v, _ := Resolve(queryurl[1])
-			QueryParam[vble].Push(v)
-			//tmp, _ := QueryParam[vble].Top()
-			fmt.Println(QueryParam)
 
+			v, _ := Resolve(queryurl[1])
+
+			st_val, ok := QueryParam[vble]
+			if ok {
+				st_val.Push(v)
+
+			} else {
+				QueryParam[vble] = Stack_Helper()
+				QueryParam[vble].Push(v)
+			}
+
+			//tmp, _ := QueryParam[vble].Top()
+			fmt.Println(*QueryParam[vble])
 		} else if strings.HasPrefix(queryurl[0], "$") {
 			// For User defined session variables
 		} else if strings.HasPrefix(queryurl[0], "-$") {
