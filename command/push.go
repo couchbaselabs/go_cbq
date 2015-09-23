@@ -42,48 +42,91 @@ func (this *Push) ParseCommand(queryurl []string) error {
 	   is modified. If the command contains no input argument
 	   or more than 1 argument then throw an error.
 	*/
+	var err error
 	fmt.Println("Isha Queryurl ", queryurl)
 	if len(queryurl) > this.MaxArgs() {
 		return errors.New("Too many arguments")
 	} else if len(queryurl) < this.MinArgs() {
 		return errors.New("Too few arguments")
+	} else if len(queryurl) == 0 {
+		/* For \PUSH with no input arguments, push the top value
+		on the stack for every variable.
+		*/
+
+		//Named Parameters
+		err = Pushparam_Helper(NamedParam)
+		if err != nil {
+			return err
+		}
+
+		//Query Parameters
+		err = Pushparam_Helper(QueryParam)
+		if err != nil {
+			return err
+		}
+
+		//User Defined Session Variables
+		err = Pushparam_Helper(UserDefSV)
+		if err != nil {
+			return err
+		}
+
+		//Predefined Session Variables
+		err = Pushparam_Helper(PreDefSV)
+		if err != nil {
+			return err
+		}
+
 	} else {
 		//Check what kind of parameter needs to be set.
-		// For query parameters
-		if strings.HasPrefix(queryurl[0], "-") {
 
+		if strings.HasPrefix(queryurl[0], "-$") {
+			// For Named Parameters
+			vble := queryurl[0]
+			vble = vble[2:]
+
+			err = PushValue_Helper(false, NamedParam, vble, queryurl[1])
+			if err != nil {
+				return err
+			}
+
+		} else if strings.HasPrefix(queryurl[0], "-") {
+			// For query parameters
 			vble := queryurl[0]
 			vble = vble[1:]
 
-			v, _ := Resolve(queryurl[1])
-
-			st_val, ok := QueryParam[vble]
-			if ok {
-				st_val.Push(v)
-
-			} else {
-				QueryParam[vble] = Stack_Helper()
-				QueryParam[vble].Push(v)
+			err = PushValue_Helper(false, QueryParam, vble, queryurl[1])
+			if err != nil {
+				return err
 			}
 
-			//tmp, _ := QueryParam[vble].Top()
-			fmt.Println(*QueryParam[vble])
 		} else if strings.HasPrefix(queryurl[0], "$") {
 			// For User defined session variables
-		} else if strings.HasPrefix(queryurl[0], "-$") {
-			// For Named Parameters
+			vble := queryurl[0]
+			vble = vble[1:]
+
+			err = PushValue_Helper(false, UserDefSV, vble, queryurl[1])
+			if err != nil {
+				return err
+			}
+
 		} else {
 			// For Predefined session variables
+			vble := queryurl[0]
 
+			err = PushValue_Helper(false, PreDefSV, vble, queryurl[1])
+			if err != nil {
+				return err
+			}
 		}
 	}
-	return nil
+	return err
 }
 
 func (this *Push) PrintHelp() {
 	fmt.Println("\\PUSH [<parameter> <value>]")
-	fmt.Println("Set the value of the given parameter to the input value")
+	fmt.Println("Push the value of the given parameter to the input parameter stack")
 	fmt.Println("<parameter> = <prefix><name>")
-	fmt.Println(" For Example : \n\t \\SET -$r 9.5 \n\t \\SET $Val -$r ;")
+	fmt.Println(" For Example : \n\t \\PUSH -$r 9.5 \n\t \\PUSH $Val -$r ; \n\t \\PUSH ;")
 	fmt.Println()
 }

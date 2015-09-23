@@ -56,13 +56,19 @@ func (this *Set) ParseCommand(queryurl []string) error {
 			vble = vble[1:]
 
 			st_val, ok := QueryParam[vble]
+			v, _ := Resolve(queryurl[1])
 			if ok {
-				v, _ := Resolve(queryurl[1])
+
+				fmt.Println("Returned val from Resolve   ", v)
 				st_val.SetTop(v)
 
 			} else {
-				err := errors.New("Need to use \\PUSH to push 1st value")
-				return err
+				/* If the stack for the input variable is empty then
+				   push the current value onto the variable stack.
+				*/
+				//err := errors.New("Need to use \\PUSH to push 1st value")
+				QueryParam[vble] = Stack_Helper()
+				QueryParam[vble].Push(v)
 			}
 
 			//tmp, _ := QueryParam[vble].Top()
@@ -70,8 +76,29 @@ func (this *Set) ParseCommand(queryurl []string) error {
 
 		} else if strings.HasPrefix(queryurl[0], "$") {
 			// For User defined session variables
+
+			vble := queryurl[0]
+			vble = vble[1:]
+
+			st_val, ok := UserDefSV[vble]
+			v, _ := Resolve(queryurl[1])
+			if ok {
+
+				fmt.Println("Returned val from Resolve   ", v)
+				st_val.SetTop(v)
+
+			} else {
+				/* If the stack for the input variable is empty then
+				   push the current value onto the variable stack.
+				*/
+				UserDefSV[vble] = Stack_Helper()
+				UserDefSV[vble].Push(v)
+			}
+			fmt.Println(*UserDefSV[vble])
+
 		} else if strings.HasPrefix(queryurl[0], "-$") {
 			// For Named Parameters
+
 		} else {
 			// For Predefined session variables
 

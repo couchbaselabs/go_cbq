@@ -13,19 +13,68 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/couchbase/query/value"
+	"strconv"
 	"strings"
+
+	"github.com/couchbase/query/value"
+	"github.com/sbinet/liner"
 )
 
 type PtrStrings *[]string
 
+/* Helper function to create a stack. */
 func Stack_Helper() *Stack {
 	r := make(Stack, 0)
 	return &r
 }
 
+/* Helper function to push or set a value in a stack. */
+func PushValue_Helper(set bool, param map[string]*Stack, vble, value string) (err error) {
+
+	st_Val, ok := param[vble]
+
+	v, err := Resolve(value)
+	if err != nil {
+		return err
+	} else {
+		if ok {
+			fmt.Println("Returned val from Resolve   ", v)
+			if set == true {
+				err = st_Val.SetTop(v)
+				if err != nil {
+					return err
+				}
+			} else if set == false {
+				st_Val.Push(v)
+			}
+
+		} else {
+			/* If the stack for the input variable is empty then
+			   push the current value onto the variable stack.
+			*/
+			param[vble] = Stack_Helper()
+			param[vble].Push(v)
+		}
+	}
+	return
+
+}
+
+/* Push value */
+func Pushparam_Helper(param map[string]*Stack) (err error) {
+	for _, v := range param {
+		t, err := v.Top()
+		if err != nil {
+			return err
+		}
+		v.Push(t)
+	}
+	return
+}
+
 var (
 	QueryParam map[string]*Stack = map[string]*Stack{}
+	NamedParam map[string]*Stack = map[string]*Stack{}
 	UserDefSV  map[string]*Stack = map[string]*Stack{}
 	PreDefSV   map[string]*Stack = map[string]*Stack{
 		"querycreds": Stack_Helper(),
@@ -34,7 +83,6 @@ var (
 		"histsize":   Stack_Helper(),
 		"autoconfig": Stack_Helper(),
 	}
-	NamedParam map[string]*Stack = map[string]*Stack{}
 )
 
 func init() {
@@ -49,11 +97,16 @@ func init() {
 	v, _ = Resolve("false")
 	PreDefSV["autoconfig"].Push(v)
 
-	/*v, _ := StrToVal("\".cbq_history\"")
+	histlim := int(liner.HistoryLimit)
+	v, _ = Resolve(strconv.Itoa(histlim))
+
+	PreDefSV["histsize"].Push(v)
+
+	v, _ = Resolve("nil")
 	PreDefSV["querycreds"].Push(v)
 
-	vo, _ := PreDefSV["querycreds"].Top()
-	fmt.Println("LALALA", vo.Actual()) */
+	v, _ = Resolve("nil")
+	PreDefSV["limit"].Push(v)
 }
 
 /* The Resolve method is used to evaluate the input parameter
@@ -72,7 +125,7 @@ func Resolve(param string) (val value.Value, err error) {
 	   appropriately to check which stacks top value needs to be
 	   returned.
 	*/
-
+	fmt.Println("Res inp ", param)
 	param = strings.TrimSpace(param)
 
 	if strings.HasPrefix(param, "-") {
@@ -80,17 +133,21 @@ func Resolve(param string) (val value.Value, err error) {
 		return.
 		*/
 		key := param[1:]
+		fmt.Println(key)
 		v, ok := QueryParam[key]
-		if ok {
-			err = errors.New("The" + param + " parameter doesnt have a value set. Please use the \\SET or \\PUSH command to set its value first")
+
+		if !ok {
+			fmt.Println(errors.New("The" + param + " parameter doesnt have a value set. Please use the \\SET or \\PUSH command to set its value first"))
 		} else {
 			val, err = v.Top()
 		}
+		fmt.Println("Res inp ", val)
 
 	} else if strings.HasPrefix(param, "$") {
 		key := param[1:]
+
 		v, ok := UserDefSV[key]
-		if ok {
+		if !ok {
 			err = errors.New("The" + param + " parameter doesnt have a value set. Please use the \\SET or \\PUSH command to set its value first")
 		} else {
 			val, err = v.Top()
@@ -99,7 +156,7 @@ func Resolve(param string) (val value.Value, err error) {
 	} else if strings.HasPrefix(param, "-$") {
 		key := param[1:]
 		v, ok := NamedParam[key]
-		if ok {
+		if !ok {
 			err = errors.New("The" + param + " parameter doesnt have a value set. Please use the \\SET or \\PUSH command to set its value first")
 		} else {
 			val, err = v.Top()
