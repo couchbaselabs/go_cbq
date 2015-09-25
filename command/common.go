@@ -105,7 +105,7 @@ func init() {
 	v, _ = Resolve("nil")
 	PreDefSV["querycreds"].Push(v)
 
-	v, _ = Resolve("nil")
+	v, _ = Resolve("0")
 	PreDefSV["limit"].Push(v)
 }
 
@@ -218,6 +218,19 @@ func StrToVal(param string) (val value.Value, err error) {
 
 	return
 
+}
+
+/* The ValToStr method converts the input value into a
+   string type.
+*/
+func ValToStr(item value.Value) (param string, err error) {
+
+	bytes, err := json.MarshalIndent(item, "    ", "    ")
+	if err != nil {
+		return "", err
+	}
+
+	return string(bytes), nil
 }
 
 /* Stack methods to be used for session parameters */

@@ -9,6 +9,8 @@
 
 package command
 
+import "io"
+
 const (
 	SHELL_VERSION = "1.0"
 )
@@ -18,6 +20,12 @@ var (
 	DISCONNECT = false
 	EXIT       = false
 )
+
+var W io.Writer
+
+var AliasCommand = map[string]string{
+	"serverversion": "select version()",
+}
 
 /* Command registry : List of Shell Commands supported by cbq */
 var COMMAND_LIST = map[string]ShellCommand{
@@ -38,7 +46,8 @@ var COMMAND_LIST = map[string]ShellCommand{
 	"\\push": &Push{},
 	//"\\pop": &Pop{},
 	//"\\unset": &Unset{},
-
+	"\\echo":  &Echo{},
+	"\\alias": &Alias{},
 }
 
 /*
