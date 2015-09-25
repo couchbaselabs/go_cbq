@@ -19,6 +19,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"time"
 	//"regexp"
@@ -373,6 +374,8 @@ func main() {
 
 func execute_query(line string, w io.Writer) error {
 
+	command.W = w
+
 	if DISCONNECT == true || NoQueryService == true {
 		if strings.HasPrefix(strings.ToLower(line), "\\connect") {
 			NoQueryService = false
@@ -385,7 +388,28 @@ func execute_query(line string, w io.Writer) error {
 	//fmt.Println("Timeout value :" + timeoutFlag.String())
 	//os.Setenv("n1ql_timeout", timeoutFlag.String())
 
-	if strings.HasPrefix(line, "\\") == true {
+	if strings.HasPrefix(line, "\\\\") {
+		commandkey := line[2:]
+		//commandkey = commandkey[0]
+
+		fmt.Println("Alias: ", commandkey)
+		fmt.Println("Alias: ", reflect.TypeOf(commandkey))
+
+		val, ok := command.AliasCommand[commandkey]
+
+		if !ok {
+			return errors.New("\nAlias " + commandkey + " doesnt exist." + val + "\n")
+		}
+
+		err := execute_query(val, w)
+		/* Error handling for Shell errors and errors recieved from
+		   go_n1ql.
+		*/
+		if err != nil {
+			return err
+		}
+
+	} else if strings.HasPrefix(line, "\\") {
 		err := ShellCommandParser(line)
 		if err != nil {
 			return err
