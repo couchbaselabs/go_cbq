@@ -12,6 +12,7 @@ package command
 import (
 	"errors"
 	"fmt"
+	"io"
 	"math"
 	"strings"
 )
@@ -45,8 +46,22 @@ func (this *Alias) ParseCommand(queryurl []string) error {
 
 		return errors.New("Too many arguments. Quote second input argument")
 	} else if len(queryurl) < this.MinArgs() {
+		if len(queryurl) == 0 {
+			// \ALIAS without input args lists the aliases present.
+			if len(AliasCommand) == 0 {
+				io.WriteString(W, "There are no defined command aliases. Use \\ALIAS <name> <value> to define.\n")
+			}
+			io.WriteString(W, "Alias \t Value\n")
+			for k, v := range AliasCommand {
 
-		return errors.New("Too few arguments")
+				tmp := fmt.Sprintf("%-14s %-14s\n", k, v)
+				io.WriteString(W, tmp)
+			}
+
+		} else {
+			return errors.New("Too few arguments")
+		}
+
 	} else {
 		value := strings.Join(queryurl[1:], " ")
 
