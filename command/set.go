@@ -71,6 +71,8 @@ func (this *Set) ParseCommand(queryurl []string) error {
 				return err
 			}
 
+			//QueryParam["credentials"]
+
 		} else if strings.HasPrefix(queryurl[0], "$") {
 			// For User defined session variables
 			vble := queryurl[0]

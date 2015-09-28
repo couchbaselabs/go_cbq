@@ -43,7 +43,7 @@ func (this *Push) ParseCommand(queryurl []string) error {
 	   or more than 1 argument then throw an error.
 	*/
 	var err error
-	fmt.Println("Isha Queryurl ", queryurl)
+	//fmt.Println("Isha Queryurl ", queryurl)
 	if len(queryurl) > this.MaxArgs() {
 		return errors.New("Too many arguments")
 	} else if len(queryurl) < this.MinArgs() {

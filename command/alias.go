@@ -40,7 +40,7 @@ func (this *Alias) MaxArgs() int {
 
 func (this *Alias) ParseCommand(queryurl []string) error {
 
-	fmt.Println("AAAAA: ", queryurl)
+	//fmt.Println("AAAAA: ", queryurl)
 
 	if len(queryurl) > this.MaxArgs() {
 
@@ -65,9 +65,9 @@ func (this *Alias) ParseCommand(queryurl []string) error {
 	} else {
 		value := strings.Join(queryurl[1:], " ")
 
-		fmt.Println("BBBBB: ", value)
+		//fmt.Println("BBBBB: ", value)
 
-		fmt.Println("AAAAA: ", queryurl)
+		//fmt.Println("AAAAA: ", queryurl)
 
 		//Add this to the map for Aliases
 		key := queryurl[0]

@@ -38,7 +38,7 @@ func PushValue_Helper(set bool, param map[string]*Stack, vble, value string) (er
 		return err
 	} else {
 		if ok {
-			fmt.Println("Returned val from Resolve   ", v)
+			//fmt.Println("Returned val from Resolve   ", v)
 			if set == true {
 				err = st_Val.SetTop(v)
 				if err != nil {
@@ -125,7 +125,7 @@ func Resolve(param string) (val value.Value, err error) {
 	   appropriately to check which stacks top value needs to be
 	   returned.
 	*/
-	fmt.Println("Res inp ", param)
+	//fmt.Println("Res inp ", param)
 	param = strings.TrimSpace(param)
 
 	if strings.HasPrefix(param, "-") {
@@ -141,7 +141,7 @@ func Resolve(param string) (val value.Value, err error) {
 		} else {
 			val, err = v.Top()
 		}
-		fmt.Println("Res inp ", val)
+		//fmt.Println("Res inp ", val)
 
 	} else if strings.HasPrefix(param, "$") {
 		key := param[1:]
@@ -185,7 +185,7 @@ func Resolve(param string) (val value.Value, err error) {
    value.Value type.
 */
 func StrToVal(param string) (val value.Value, err error) {
-	fmt.Println("Isha :: " + param)
+	//fmt.Println("Isha :: " + param)
 	param = strings.TrimSpace(param)
 	bytes := []byte(param)
 
@@ -224,6 +224,7 @@ func StrToVal(param string) (val value.Value, err error) {
    string type.
 */
 func ValToStr(item value.Value) (param string, err error) {
+	//fmt.Println(item.Type())
 
 	bytes, err := json.MarshalIndent(item, "    ", "    ")
 	if err != nil {

@@ -47,7 +47,7 @@ func (this *Echo) ParseCommand(queryurl []string) error {
 
 		return errors.New("Too few arguments")
 	} else {
-		fmt.Println("AAAAA: ", queryurl)
+		//fmt.Println("AAAAA: ", queryurl)
 
 		for _, val := range queryurl {
 
@@ -138,6 +138,11 @@ func (this *Echo) ParseCommand(queryurl []string) error {
 
 				io.WriteString(W, tmp)
 				io.WriteString(W, "\t")
+
+			} else if strings.HasPrefix(val, "\"") {
+				/* When we want to echo input statements, parse it
+				   till we see another ".
+				*/
 
 			} else {
 				//Predefined Session Variables and generic input

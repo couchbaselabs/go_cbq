@@ -19,7 +19,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"reflect"
+	//"reflect"
 	"strings"
 	"time"
 	//"regexp"
@@ -368,7 +368,7 @@ func main() {
 		os.Setenv("n1ql_creds", string(ac))
 	}
 
-	fmt.Println("Input arguments, ", os.Args)
+	//fmt.Println("Input arguments, ", os.Args)
 	HandleInteractiveMode(filepath.Base(os.Args[0]))
 }
 
@@ -392,8 +392,8 @@ func execute_query(line string, w io.Writer) error {
 		commandkey := line[2:]
 		//commandkey = commandkey[0]
 
-		fmt.Println("Alias: ", commandkey)
-		fmt.Println("Alias: ", reflect.TypeOf(commandkey))
+		//fmt.Println("Alias: ", commandkey)
+		//fmt.Println("Alias: ", reflect.TypeOf(commandkey))
 
 		val, ok := command.AliasCommand[commandkey]
 
