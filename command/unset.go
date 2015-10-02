@@ -10,39 +10,35 @@
 package command
 
 import (
-	//"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
 )
 
-/* Set Command */
-type Set struct {
+/* Unset Command */
+type Unset struct {
 	ShellCommand
 }
 
-func (this *Set) Name() string {
-	return "SET"
+func (this *Unset) Name() string {
+	return "UNSET"
 }
 
-func (this *Set) CommandCompletion() bool {
+func (this *Unset) CommandCompletion() bool {
 	return false
 }
 
-func (this *Set) MinArgs() int {
+func (this *Unset) MinArgs() int {
 	return 2
 }
 
-func (this *Set) MaxArgs() int {
+func (this *Unset) MaxArgs() int {
 	return 2
 }
 
-func (this *Set) ParseCommand(queryurl []string) error {
-	/* Command to set the value of the given parameter to
-	   the input value. The top value of the parameter stack
-	   is modified. If the command contains no input argument
-	   or more than 1 argument then throw an error.
-	*/
+func (this *Unset) ParseCommand(queryurl []string) error {
+	/* Command to Unset the value of the given parameter.
+	 */
 	var err error
 	//fmt.Println("Isha Queryurl ", queryurl)
 	if len(queryurl) > this.MaxArgs() {
@@ -50,14 +46,14 @@ func (this *Set) ParseCommand(queryurl []string) error {
 	} else if len(queryurl) < this.MinArgs() {
 		return errors.New("Too few arguments")
 	} else {
-		//Check what kind of parameter needs to be set.
+		//Check what kind of parameter needs to be Unset.
 		// For query parameters
 		if strings.HasPrefix(queryurl[0], "-$") {
 			// For Named Parameters
 			vble := queryurl[0]
 			vble = vble[2:]
 
-			err = PushValue_Helper(true, NamedParam, vble, queryurl[1])
+			err = PopValue_Helper(true, NamedParam, vble)
 			if err != nil {
 				return err
 			}
@@ -67,7 +63,7 @@ func (this *Set) ParseCommand(queryurl []string) error {
 			vble := queryurl[0]
 			vble = vble[1:]
 
-			err = PushValue_Helper(true, QueryParam, vble, queryurl[1])
+			err = PopValue_Helper(true, QueryParam, vble)
 			if err != nil {
 				return err
 			}
@@ -79,7 +75,7 @@ func (this *Set) ParseCommand(queryurl []string) error {
 			vble := queryurl[0]
 			vble = vble[1:]
 
-			err = PushValue_Helper(true, UserDefSV, vble, queryurl[1])
+			err = PopValue_Helper(true, UserDefSV, vble)
 			if err != nil {
 				return err
 			}
@@ -88,7 +84,7 @@ func (this *Set) ParseCommand(queryurl []string) error {
 			// For Predefined session variables
 			vble := queryurl[0]
 
-			err = PushValue_Helper(true, PreDefSV, vble, queryurl[1])
+			err = PopValue_Helper(true, PreDefSV, vble)
 			if err != nil {
 				return err
 			}
@@ -97,10 +93,10 @@ func (this *Set) ParseCommand(queryurl []string) error {
 	return err
 }
 
-func (this *Set) PrintHelp() {
-	fmt.Println("\\SET <parameter> <value>")
-	fmt.Println("Set the value of the given parameter to the input value")
+func (this *Unset) PrintHelp() {
+	fmt.Println("\\Unset <parameter>")
+	fmt.Println("Unset the value of the given parameter.")
 	fmt.Println("<parameter> = <prefix><name>")
-	fmt.Println(" For Example : \n\t \\SET -$r 9.5 \n\t \\SET $Val -$r ;")
+	fmt.Println(" For Example : \n\t \\Unset -$r \n\t \\Unset $Val ;")
 	fmt.Println()
 }

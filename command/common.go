@@ -13,11 +13,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"strconv"
+	//"strconv"
 	"strings"
 
 	"github.com/couchbase/query/value"
-	"github.com/sbinet/liner"
+	//"github.com/sbinet/liner"
 )
 
 type PtrStrings *[]string
@@ -26,50 +26,6 @@ type PtrStrings *[]string
 func Stack_Helper() *Stack {
 	r := make(Stack, 0)
 	return &r
-}
-
-/* Helper function to push or set a value in a stack. */
-func PushValue_Helper(set bool, param map[string]*Stack, vble, value string) (err error) {
-
-	st_Val, ok := param[vble]
-
-	v, err := Resolve(value)
-	if err != nil {
-		return err
-	} else {
-		if ok {
-			//fmt.Println("Returned val from Resolve   ", v)
-			if set == true {
-				err = st_Val.SetTop(v)
-				if err != nil {
-					return err
-				}
-			} else if set == false {
-				st_Val.Push(v)
-			}
-
-		} else {
-			/* If the stack for the input variable is empty then
-			   push the current value onto the variable stack.
-			*/
-			param[vble] = Stack_Helper()
-			param[vble].Push(v)
-		}
-	}
-	return
-
-}
-
-/* Push value */
-func Pushparam_Helper(param map[string]*Stack) (err error) {
-	for _, v := range param {
-		t, err := v.Top()
-		if err != nil {
-			return err
-		}
-		v.Push(t)
-	}
-	return
 }
 
 var (
@@ -91,7 +47,12 @@ func init() {
 	   values.
 	*/
 
-	v, _ := Resolve("\".cbq_history\"")
+	//err := PushValue_Helper(false, PreDefSV, "histfile", "\".cbq_history\"")
+	//if err != nil {
+	//	fmt.Println(err)
+	//}
+
+	/*v, _ := Resolve("\".cbq_history\"")
 	PreDefSV["histfile"].Push(v)
 
 	v, _ = Resolve("false")
@@ -107,6 +68,7 @@ func init() {
 
 	v, _ = Resolve("0")
 	PreDefSV["limit"].Push(v)
+	*/
 }
 
 /* The Resolve method is used to evaluate the input parameter
@@ -128,7 +90,31 @@ func Resolve(param string) (val value.Value, err error) {
 	//fmt.Println("Res inp ", param)
 	param = strings.TrimSpace(param)
 
-	if strings.HasPrefix(param, "-") {
+	if strings.HasPrefix(param, "\\\\") {
+		/* It is a Command alias */
+		key := param[2:]
+		st_val, ok := AliasCommand[key]
+		if !ok {
+			err = errors.New("Command for " + key + " does not exist. Please use \\ALIAS to create a command alias.\n")
+		} else {
+
+			st_val = "\"" + st_val + "\""
+
+			val, err = StrToVal(st_val)
+
+			fmt.Println("Test", st_val, val.Type())
+		}
+
+	} else if strings.HasPrefix(param, "-$") {
+		key := param[2:]
+		v, ok := NamedParam[key]
+		if !ok {
+			err = errors.New("The" + param + " parameter doesnt have a value set. Please use the \\SET or \\PUSH command to set its value first")
+		} else {
+			val, err = v.Top()
+		}
+
+	} else if strings.HasPrefix(param, "-") {
 		/* Then it is a query parameter. Retrieve its value and
 		return.
 		*/
@@ -153,15 +139,6 @@ func Resolve(param string) (val value.Value, err error) {
 			val, err = v.Top()
 		}
 
-	} else if strings.HasPrefix(param, "-$") {
-		key := param[1:]
-		v, ok := NamedParam[key]
-		if !ok {
-			err = errors.New("The" + param + " parameter doesnt have a value set. Please use the \\SET or \\PUSH command to set its value first")
-		} else {
-			val, err = v.Top()
-		}
-
 	} else {
 
 		/* There can be two possibilities. 1. Its a Predefined
@@ -175,7 +152,12 @@ func Resolve(param string) (val value.Value, err error) {
 		if ok {
 			val, err = v.Top()
 		} else {
+			if !strings.HasPrefix(param, "\"") {
+				param = "\"" + param + "\""
+				fmt.Println("Came in here")
+			}
 			val, err = StrToVal(param)
+			fmt.Println("Test", param, val.Type())
 		}
 	}
 	return
@@ -210,8 +192,7 @@ func StrToVal(param string) (val value.Value, err error) {
 
 		//For strings, number, boolean, null and binary
 	default:
-		//if param != true && param != false && param !=null {
-		//}
+
 		val = value.NewValue(bytes)
 		err = nil
 	}
@@ -226,7 +207,9 @@ func StrToVal(param string) (val value.Value, err error) {
 func ValToStr(item value.Value) (param string, err error) {
 	//fmt.Println(item.Type())
 
-	bytes, err := json.MarshalIndent(item, "    ", "    ")
+	//bytes, err := json.MarshalIndent(item, "    ", "    ")
+
+	bytes, err := item.MarshalJSON()
 	if err != nil {
 		return "", err
 	}
@@ -288,4 +271,62 @@ func (stack *Stack) Pop() (val value.Value, err error) {
 
 func (stack *Stack) Len() int {
 	return len(*stack)
+}
+
+/* Helper function to push or set a value in a stack. */
+func PushValue_Helper(set bool, param map[string]*Stack, vble, value string) (err error) {
+
+	st_Val, ok := param[vble]
+
+	v, err := Resolve(value)
+	if err != nil {
+		return err
+	} else {
+		if ok {
+			//fmt.Println("Returned val from Resolve   ", v)
+			if set == true {
+				err = st_Val.SetTop(v)
+				if err != nil {
+					return err
+				}
+			} else if set == false {
+				st_Val.Push(v)
+			}
+
+		} else {
+			/* If the stack for the input variable is empty then
+			   push the current value onto the variable stack.
+			*/
+			param[vble] = Stack_Helper()
+			param[vble].Push(v)
+		}
+	}
+	return
+
+}
+
+/* Helper function to pop or unset a value in a stack. */
+func PopValue_Helper(unset bool, param map[string]*Stack, vble string) (err error) {
+
+	st_Val, ok := param[vble]
+
+	if unset == false {
+		//To pop a value from the input stack
+		if ok {
+			_, err = st_Val.Pop()
+		} else {
+			err = errors.New("Parameter does not exist")
+		}
+	} else {
+		// Unset the enire stack for given parameter
+		for st_Val.Len() > 0 {
+			_, err := st_Val.Pop()
+			if err != nil {
+				return err
+			}
+		}
+
+	}
+	return
+
 }

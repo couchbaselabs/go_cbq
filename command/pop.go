@@ -15,33 +15,29 @@ import (
 	"strings"
 )
 
-/* Push Command */
-type Push struct {
+/* Pop Command */
+type Pop struct {
 	ShellCommand
 }
 
-func (this *Push) Name() string {
-	return "PUSH"
+func (this *Pop) Name() string {
+	return "Pop"
 }
 
-func (this *Push) CommandCompletion() bool {
+func (this *Pop) CommandCompletion() bool {
 	return false
 }
 
-func (this *Push) MinArgs() int {
+func (this *Pop) MinArgs() int {
 	return 0
 }
 
-func (this *Push) MaxArgs() int {
+func (this *Pop) MaxArgs() int {
 	return 2
 }
 
-func (this *Push) ParseCommand(queryurl []string) error {
-	/* Command to set the value of the given parameter to
-	   the input value. The top value of the parameter stack
-	   is modified. If the command contains no input argument
-	   or more than 1 argument then throw an error.
-	*/
+func (this *Pop) ParseCommand(queryurl []string) error {
+
 	var err error
 	//fmt.Println("Isha Queryurl ", queryurl)
 	if len(queryurl) > this.MaxArgs() {
@@ -49,54 +45,53 @@ func (this *Push) ParseCommand(queryurl []string) error {
 	} else if len(queryurl) < this.MinArgs() {
 		return errors.New("Too few arguments")
 	} else if len(queryurl) == 0 {
-		/* For \PUSH with no input arguments, push the top value
+		/* For \Pop with no input arguments, Pop the top value
 		on the stack for every variable.
 		*/
 
 		//Named Parameters
-		err = Pushparam_Helper(NamedParam)
+		err = Popparam_Helper(NamedParam)
 		if err != nil {
 			return err
 		}
 
 		//Query Parameters
-		err = Pushparam_Helper(QueryParam)
+		err = Popparam_Helper(QueryParam)
 		if err != nil {
 			return err
 		}
 
 		//User Defined Session Variables
-		err = Pushparam_Helper(UserDefSV)
+		err = Popparam_Helper(UserDefSV)
 		if err != nil {
 			return err
 		}
 
 		//Predefined Session Variables
-		err = Pushparam_Helper(PreDefSV)
+		err = Popparam_Helper(PreDefSV)
 		if err != nil {
 			return err
 		}
 
 	} else {
-		//Check what kind of parameter needs to be set.
+		//Check what kind of parameter needs to be popped
 
 		if strings.HasPrefix(queryurl[0], "-$") {
 			// For Named Parameters
 			vble := queryurl[0]
 			vble = vble[2:]
 
-			err = PushValue_Helper(false, NamedParam, vble, queryurl[1])
+			err = PopValue_Helper(false, NamedParam, vble)
 			if err != nil {
 				return err
 			}
-			fmt.Println("DEBUG ISHA ", NamedParam[vble])
 
 		} else if strings.HasPrefix(queryurl[0], "-") {
 			// For query parameters
 			vble := queryurl[0]
 			vble = vble[1:]
 
-			err = PushValue_Helper(false, QueryParam, vble, queryurl[1])
+			err = PopValue_Helper(false, QueryParam, vble)
 			if err != nil {
 				return err
 			}
@@ -106,7 +101,7 @@ func (this *Push) ParseCommand(queryurl []string) error {
 			vble := queryurl[0]
 			vble = vble[1:]
 
-			err = PushValue_Helper(false, UserDefSV, vble, queryurl[1])
+			err = PopValue_Helper(false, UserDefSV, vble)
 			if err != nil {
 				return err
 			}
@@ -115,27 +110,27 @@ func (this *Push) ParseCommand(queryurl []string) error {
 			// For Predefined session variables
 			vble := queryurl[0]
 
-			err = PushValue_Helper(false, PreDefSV, vble, queryurl[1])
+			err = PopValue_Helper(false, PreDefSV, vble)
 			if err != nil {
 				return err
 			}
 		}
 	}
-	return err
+	return nil
 }
 
-func (this *Push) PrintHelp() {
-	fmt.Println("\\PUSH [<parameter> <value>]")
-	fmt.Println("Push the value of the given parameter to the input parameter stack")
+func (this *Pop) PrintHelp() {
+	fmt.Println("\\Pop [<parameter>]")
+	fmt.Println("Pop the value of the given parameter from the input parameter stack")
 	fmt.Println("<parameter> = <prefix><name>")
-	fmt.Println(" For Example : \n\t \\PUSH -$r 9.5 \n\t \\PUSH $Val -$r ; \n\t \\PUSH ;")
+	fmt.Println(" For Example : \n\t \\Pop -$r \n\t \\Pop $Val ; \n\t \\Pop ;")
 	fmt.Println()
 }
 
 /* Push value from the Top of the stack onto the parameter stack.
-   This is used by the \PUSH command with no arguments.
+   This is used by the \POP command with no arguments.
 */
-func Pushparam_Helper(param map[string]*Stack) (err error) {
+func Popparam_Helper(param map[string]*Stack) (err error) {
 	for _, v := range param {
 		t, err := v.Top()
 		if err != nil {

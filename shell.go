@@ -22,6 +22,7 @@ import (
 	//"reflect"
 	"strings"
 	"time"
+	"unicode"
 	//"regexp"
 
 	"github.com/couchbaselabs/go_cbq/command"
@@ -390,6 +391,7 @@ func execute_query(line string, w io.Writer) error {
 
 	if strings.HasPrefix(line, "\\\\") {
 		commandkey := line[2:]
+		commandkey = strings.TrimSpace(commandkey)
 		//commandkey = commandkey[0]
 
 		//fmt.Println("Alias: ", commandkey)
@@ -519,10 +521,31 @@ func N1QLCommandParser(line string, n1ql *sql.DB, w io.Writer) error {
 	return nil
 }
 
+/* From
+http://intogooglego.blogspot.com/2015/05/day-6-string-minifier-remove-whitespaces.html
+*/
+func stringMinifier(in string) (out string) {
+	white := false
+	for _, c := range in {
+		if unicode.IsSpace(c) {
+			if !white {
+				out = out + " "
+			}
+			white = true
+		} else {
+			out = out + string(c)
+			white = false
+		}
+	}
+	return
+}
+
 func ShellCommandParser(line string) error {
 
 	line = strings.ToLower(line)
 	line = strings.TrimSpace(line)
+
+	line = stringMinifier(line)
 
 	cmd_args := strings.Split(line, " ")
 

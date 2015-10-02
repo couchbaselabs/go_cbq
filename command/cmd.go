@@ -42,10 +42,10 @@ var COMMAND_LIST = map[string]ShellCommand{
 	"\\copyright": &Copyright{},
 
 	/* Session Management */
-	"\\set":  &Set{},
-	"\\push": &Push{},
-	//"\\pop": &Pop{},
-	//"\\unset": &Unset{},
+	"\\set":   &Set{},
+	"\\push":  &Push{},
+	"\\pop":   &Pop{},
+	"\\unset": &Unset{},
 	"\\echo":  &Echo{},
 	"\\alias": &Alias{},
 }

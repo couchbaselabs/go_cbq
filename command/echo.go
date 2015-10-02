@@ -14,7 +14,9 @@ import (
 	"fmt"
 	"io"
 	"math"
-	"strings"
+	//"strings"
+
+	"github.com/couchbase/query/value"
 )
 
 /* Echo Command */
@@ -39,6 +41,7 @@ func (this *Echo) MaxArgs() int {
 }
 
 func (this *Echo) ParseCommand(queryurl []string) error {
+	//var quotestr = false
 
 	if len(queryurl) > this.MaxArgs() {
 
@@ -47,137 +50,40 @@ func (this *Echo) ParseCommand(queryurl []string) error {
 
 		return errors.New("Too few arguments")
 	} else {
-		//fmt.Println("AAAAA: ", queryurl)
 
 		for _, val := range queryurl {
 
-			if strings.HasPrefix(val, "\\") {
-
-				//Command aliases
-				key := val[2:]
-				st_val, ok := AliasCommand[key]
-				if !ok {
-					err := errors.New("\nCommand for " + key + " does not exist. Please use \\ALIAS to create a command alias.\n")
-					io.WriteString(W, err.Error())
-					continue
-				} else {
-					io.WriteString(W, st_val)
-					io.WriteString(W, "\t")
-				}
-
-			} else if strings.HasPrefix(val, "-$") {
-
-				//Named Parameters
-				key := val[2:]
-				st_val, ok := NamedParam[key]
-				if !ok {
-					err := errors.New("\nNamed Parameter -$" + key + " does not exist. Please use \\SET or \\PUSH to create it.\n")
-					io.WriteString(W, err.Error())
-					continue
-				}
-
-				v, err := st_val.Top()
-				if err != nil {
-					return err
-				}
-
-				tmp, err := ValToStr(v)
-				if err != nil {
-					return err
-				}
-
-				io.WriteString(W, tmp)
-				io.WriteString(W, "\t")
-
-			} else if strings.HasPrefix(val, "-") {
-
-				//Query Parameters
-				key := val[1:]
-
-				st_val, ok := QueryParam[key]
-				if !ok {
-					err := errors.New("\nQuery Parameter -" + key + " does not exist. Please use \\SET or \\PUSH to create it.\n")
-					io.WriteString(W, err.Error())
-					continue
-				}
-
-				v, err := st_val.Top()
-				if err != nil {
-					return err
-				}
-
-				tmp, err := ValToStr(v)
-				if err != nil {
-					return err
-				}
-
-				io.WriteString(W, tmp)
-				io.WriteString(W, "\t")
-
-			} else if strings.HasPrefix(val, "$") {
-				//User Defined Session Variables
-
-				key := val[1:]
-
-				st_val, ok := UserDefSV[key]
-				if !ok {
-					err := errors.New("\nUser defined Shell Parameter $" + key + " does not exist. Please use \\SET or \\PUSH to create it.\n")
-					io.WriteString(W, err.Error())
-					continue
-				}
-
-				v, err := st_val.Top()
-				if err != nil {
-					return err
-				}
-
-				tmp, err := ValToStr(v)
-				if err != nil {
-					return err
-				}
-
-				io.WriteString(W, tmp)
-				io.WriteString(W, "\t")
-
-			} else if strings.HasPrefix(val, "\"") {
-				/* When we want to echo input statements, parse it
-				   till we see another ".
-				*/
-
-			} else {
-				//Predefined Session Variables and generic input
-
-				/* In this case it can either be a predefined session
-				   variable since they dont have prefixes, or can be
-				   a random string that the user wants to echo.
-				*/
-				st_val, ok := PreDefSV[val]
-				if !ok {
-					/* It isnt a Predefined shell parameter, which means
-					that it is a generic input.
-					*/
-					io.WriteString(W, val)
-					io.WriteString(W, "\t")
-
-				} else {
-					//  It is a Predefined Shell Parameter
-					v, err := st_val.Top()
-					if err != nil {
-						return err
-					}
-
-					tmp, err := ValToStr(v)
-					if err != nil {
-						return err
-					}
-
-					io.WriteString(W, tmp)
-					io.WriteString(W, "\t")
-
-				}
-
+			fmt.Println("DEBUG : value going in to Resolve : ", val)
+			v, err := Resolve(val)
+			if err != nil {
+				return err
 			}
 
+			fmt.Println("DEBUG : value coming out of Resolve : ", v)
+
+			if v.Type() == value.STRING {
+
+				io.WriteString(W, fmt.Sprintf("%s", v))
+				io.WriteString(W, " ")
+				fmt.Println("In here  ")
+			} else {
+				//if !strings.HasPrefix(val, "$") &&
+				//	!strings.HasPrefix(val, "-$") &&
+				//	!strings.HasPrefix(val, "-") &&
+				//	v.Type() == value.BINARY {
+				//	return errors.New("Unbalanced input string " + val + " ")
+				//}
+
+				tmp, err := ValToStr(v)
+				fmt.Println("DEBUG : value coming out of ValtoStr : ", tmp)
+
+				if err != nil {
+					return err
+				}
+				io.WriteString(W, string(tmp))
+				io.WriteString(W, " ")
+				fmt.Println("NOOO In here  ")
+			}
 		}
 	}
 
