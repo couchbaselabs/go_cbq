@@ -89,7 +89,7 @@ func (this *Push) ParseCommand(queryurl []string) error {
 			if err != nil {
 				return err
 			}
-			fmt.Println("DEBUG ISHA ", NamedParam[vble])
+			//fmt.Println("DEBUG ISHA ", NamedParam[vble])
 
 		} else if strings.HasPrefix(queryurl[0], "-") {
 			// For query parameters

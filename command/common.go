@@ -102,7 +102,7 @@ func Resolve(param string) (val value.Value, err error) {
 
 			val, err = StrToVal(st_val)
 
-			fmt.Println("Test", st_val, val.Type())
+			//fmt.Println("Test", st_val, val.Type())
 		}
 
 	} else if strings.HasPrefix(param, "-$") {
@@ -154,10 +154,10 @@ func Resolve(param string) (val value.Value, err error) {
 		} else {
 			if !strings.HasPrefix(param, "\"") {
 				param = "\"" + param + "\""
-				fmt.Println("Came in here")
+				//fmt.Println("Came in here")
 			}
 			val, err = StrToVal(param)
-			fmt.Println("Test", param, val.Type())
+			//fmt.Println("Test", param, val.Type())
 		}
 	}
 	return

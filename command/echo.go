@@ -53,19 +53,19 @@ func (this *Echo) ParseCommand(queryurl []string) error {
 
 		for _, val := range queryurl {
 
-			fmt.Println("DEBUG : value going in to Resolve : ", val)
+			//fmt.Println("DEBUG : value going in to Resolve : ", val)
 			v, err := Resolve(val)
 			if err != nil {
 				return err
 			}
 
-			fmt.Println("DEBUG : value coming out of Resolve : ", v)
+			//fmt.Println("DEBUG : value coming out of Resolve : ", v)
 
 			if v.Type() == value.STRING {
 
 				io.WriteString(W, fmt.Sprintf("%s", v))
 				io.WriteString(W, " ")
-				fmt.Println("In here  ")
+				//fmt.Println("In here  ")
 			} else {
 				//if !strings.HasPrefix(val, "$") &&
 				//	!strings.HasPrefix(val, "-$") &&
@@ -75,14 +75,14 @@ func (this *Echo) ParseCommand(queryurl []string) error {
 				//}
 
 				tmp, err := ValToStr(v)
-				fmt.Println("DEBUG : value coming out of ValtoStr : ", tmp)
+				//fmt.Println("DEBUG : value coming out of ValtoStr : ", tmp)
 
 				if err != nil {
 					return err
 				}
 				io.WriteString(W, string(tmp))
 				io.WriteString(W, " ")
-				fmt.Println("NOOO In here  ")
+				//fmt.Println("NOOO In here  ")
 			}
 		}
 	}

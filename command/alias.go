@@ -51,7 +51,7 @@ func (this *Alias) ParseCommand(queryurl []string) error {
 			if len(AliasCommand) == 0 {
 				io.WriteString(W, "There are no defined command aliases. Use \\ALIAS <name> <value> to define.\n")
 			}
-			io.WriteString(W, "Alias \t Value\n")
+			//io.WriteString(W, "Alias \t Value\n")
 			for k, v := range AliasCommand {
 
 				tmp := fmt.Sprintf("%-14s %-14s\n", k, v)
