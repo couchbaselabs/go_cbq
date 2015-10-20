@@ -67,12 +67,6 @@ func (this *Echo) ParseCommand(queryurl []string) error {
 				io.WriteString(W, " ")
 				//fmt.Println("In here  ")
 			} else {
-				//if !strings.HasPrefix(val, "$") &&
-				//	!strings.HasPrefix(val, "-$") &&
-				//	!strings.HasPrefix(val, "-") &&
-				//	v.Type() == value.BINARY {
-				//	return errors.New("Unbalanced input string " + val + " ")
-				//}
 
 				tmp, err := ValToStr(v)
 				//fmt.Println("DEBUG : value coming out of ValtoStr : ", tmp)

@@ -17,16 +17,16 @@ import (
 	"fmt"
 	"golang.org/x/crypto/ssh/terminal"
 	"io"
+
 	"os"
 	"path/filepath"
 	//"reflect"
 	"strings"
-	"time"
 	"unicode"
 	//"regexp"
 
 	"github.com/couchbaselabs/go_cbq/command"
-	_ "github.com/couchbaselabs/go_n1ql"
+	go_n1ql "github.com/couchbaselabs/go_n1ql"
 )
 
 /*
@@ -76,19 +76,19 @@ var quietFlag = flag.Bool("quiet", false, "Enable/Disable startup connection mes
 /*
    Option        : -timeout or -t
    Args          : <timeout value>
-   Default value : "2ms"
+   Default value : "0ms"
    Query timeout parameter.
 */
 
-var timeoutFlag time.Duration
+var timeoutFlag string
 
 func init() {
 	const (
-		defaultval = 0 * time.Minute
-		usage      = "Query timeout parameter. Units are mandatory. \n\t\t Default : \"2ms\" \n\t\t Valid Units : ns (nanoseconds), us (microseconds), ms (milliseconds), s (seconds), m (minutes), h (hours) "
+		defaultval = ""
+		usage      = "Query timeout parameter. Units are mandatory. For Example : \"10ms\". \n\t\t Valid Units : ns (nanoseconds), us (microseconds), ms (milliseconds), s (seconds), m (minutes), h (hours) "
 	)
-	flag.DurationVar(&timeoutFlag, "timeout", defaultval, usage)
-	flag.DurationVar(&timeoutFlag, "t", defaultval, " Shorthand for -timeout")
+	flag.StringVar(&timeoutFlag, "timeout", defaultval, usage)
+	flag.StringVar(&timeoutFlag, "t", defaultval, " Shorthand for -timeout")
 }
 
 /*
@@ -190,8 +190,8 @@ func init() {
 		defaultval = ""
 		usage      = "File to load commands from. \n\t For Example : -file=temp.txt"
 	)
-	flag.StringVar(&scriptFlag, "file", defaultval, usage)
-	flag.StringVar(&scriptFlag, "f", defaultval, " Shorthand for -file")
+	flag.StringVar(&inputFlag, "file", defaultval, usage)
+	flag.StringVar(&inputFlag, "f", defaultval, " Shorthand for -file")
 
 }
 
@@ -208,8 +208,8 @@ func init() {
 		defaultval = ""
 		usage      = "File to output commands and their results. \n\t For Example : -output=temp.txt"
 	)
-	flag.StringVar(&scriptFlag, "output", defaultval, usage)
-	flag.StringVar(&scriptFlag, "o", defaultval, " Shorthand for -output")
+	flag.StringVar(&outputFlag, "output", defaultval, usage)
+	flag.StringVar(&outputFlag, "o", defaultval, " Shorthand for -output")
 
 }
 
@@ -226,8 +226,8 @@ func init() {
 		defaultval = ""
 		usage      = "File to log commands into. \n\t For Example : -log-file=temp.txt"
 	)
-	flag.StringVar(&scriptFlag, "log-file", defaultval, usage)
-	flag.StringVar(&scriptFlag, "l", defaultval, " Shorthand for -log-file")
+	flag.StringVar(&logFlag, "log-file", defaultval, usage)
+	flag.StringVar(&logFlag, "l", defaultval, " Shorthand for -log-file")
 
 }
 
@@ -365,8 +365,16 @@ func main() {
 			fmt.Println(fgRed, "ERROR", s_err.Code(), ":", s_err, reset)
 			os.Exit(1)
 		}
+		go_n1ql.SetQueryParams("creds", string(ac))
+	}
 
-		os.Setenv("n1ql_creds", string(ac))
+	if timeoutFlag != "0ms" {
+		go_n1ql.SetQueryParams("timeout", timeoutFlag)
+	}
+
+	if inputFlag != "" {
+		//Read each line from the file and call execute query
+
 	}
 
 	//fmt.Println("Input arguments, ", os.Args)
@@ -457,7 +465,7 @@ func execute_query(line string, w io.Writer) error {
 
 func N1QLCommandParser(line string, n1ql *sql.DB, w io.Writer) error {
 	if strings.HasPrefix(strings.ToLower(line), "create") {
-		_, err := n1ql.Exec(line)
+		_, err := n1ql.Query(line)
 		if err != nil {
 			return err
 		}
@@ -547,10 +555,25 @@ func ShellCommandParser(line string) error {
 
 	line = stringMinifier(line)
 
+	if strings.HasPrefix(line, "\\echo") {
+
+		count_param := strings.Count(line, "\"")
+
+		count_param_bs := strings.Count(line, "\\\"")
+
+		if count_param%2 == 0 && count_param_bs%2 == 0 {
+			r := strings.NewReplacer("\\\"", "\\\"", "\"", "")
+			line = r.Replace(line)
+
+		} else {
+			return errors.New("Unbalanced Paranthesis in input.")
+		}
+
+	}
+
 	cmd_args := strings.Split(line, " ")
 
 	//Lookup Command from function registry
-
 	var err error
 
 	Cmd, ok := command.COMMAND_LIST[cmd_args[0]]
