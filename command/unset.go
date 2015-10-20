@@ -29,11 +29,11 @@ func (this *Unset) CommandCompletion() bool {
 }
 
 func (this *Unset) MinArgs() int {
-	return 2
+	return 1
 }
 
 func (this *Unset) MaxArgs() int {
-	return 2
+	return 1
 }
 
 func (this *Unset) ParseCommand(queryurl []string) error {

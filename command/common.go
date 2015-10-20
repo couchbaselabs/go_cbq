@@ -13,6 +13,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	//"reflect"
 	//"strconv"
 	"strings"
 
@@ -98,11 +99,12 @@ func Resolve(param string) (val value.Value, err error) {
 			err = errors.New("Command for " + key + " does not exist. Please use \\ALIAS to create a command alias.\n")
 		} else {
 
-			st_val = "\"" + st_val + "\""
+			//st_val = "\"" + st_val + "\""
+			//fmt.Println("DEBUG Resolve : ", st_val, reflect.TypeOf(st_val))
 
 			val, err = StrToVal(st_val)
 
-			//fmt.Println("Test", st_val, val.Type())
+			//fmt.Println("DEBUG Resolve : ", st_val, val.Type())
 		}
 
 	} else if strings.HasPrefix(param, "-$") {
@@ -201,6 +203,18 @@ func StrToVal(param string) (val value.Value, err error) {
 
 }
 
+/*func B2S(bs []uint8) string {
+	b := make([]byte, len(bs))
+	for i, v := range bs {
+		if v < 0 {
+			b[i] = byte(256 + int(v))
+		} else {
+			b[i] = byte(v)
+		}
+	}
+	return string(b)
+}*/
+
 /* The ValToStr method converts the input value into a
    string type.
 */
@@ -209,12 +223,20 @@ func ValToStr(item value.Value) (param string, err error) {
 
 	//bytes, err := json.MarshalIndent(item, "    ", "    ")
 
+	//if item.Type() == value.BINARY {
+
+	//	param = B2S(item.Actual().([]uint8))
+	//	err = nil
+	//} else {
 	bytes, err := item.MarshalJSON()
 	if err != nil {
-		return "", err
+		param = ""
 	}
+	param = string(bytes)
+	err = nil
+	//}
 
-	return string(bytes), nil
+	return
 }
 
 /* Stack methods to be used for session parameters */
@@ -319,13 +341,16 @@ func PopValue_Helper(unset bool, param map[string]*Stack, vble string) (err erro
 		}
 	} else {
 		// Unset the enire stack for given parameter
-		for st_Val.Len() > 0 {
-			_, err := st_Val.Pop()
-			if err != nil {
-				return err
+		if ok {
+			for st_Val.Len() > 0 {
+				_, err := st_Val.Pop()
+				if err != nil {
+					return err
+				}
 			}
+		} else {
+			err = errors.New("Parameter does not exist")
 		}
-
 	}
 	return
 
