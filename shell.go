@@ -353,6 +353,11 @@ func main() {
 			}
 		}
 	}
+	//Append empty credentials. This is used for cases where one of the buckets
+	//is a SASL bucket, and we need to access the other unprotected buckets.
+	//CBauth works this way.
+
+	creds = append(creds, Credentials{"user": "", "pass": ""})
 
 	/* Add the credentials set by -user and -credentials to the
 	   go_n1ql creds parameter.
@@ -377,6 +382,7 @@ func main() {
 
 	}
 
+	go_n1ql.SetPassthroughMode(true)
 	//fmt.Println("Input arguments, ", os.Args)
 	HandleInteractiveMode(filepath.Base(os.Args[0]))
 }
@@ -463,9 +469,35 @@ func execute_query(line string, w io.Writer) error {
 	return nil
 }
 
+func WriteHelper(rows *sql.Rows) ([]byte, error) {
+	var results *json.RawMessage
+	if err := rows.Scan(&results); err != nil {
+		return nil, err
+	}
+	b, err := results.MarshalJSON()
+	if err != nil {
+		return nil, err
+	}
+
+	if *prettyFlag == true {
+		var dat map[string]interface{}
+		if err := json.Unmarshal(b, &dat); err != nil {
+			return nil, err
+		}
+
+		b, err = json.MarshalIndent(dat, "", "  ")
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return b, nil
+}
+
 func N1QLCommandParser(line string, n1ql *sql.DB, w io.Writer) error {
-	if strings.HasPrefix(strings.ToLower(line), "create") {
+	if strings.HasPrefix(strings.ToLower(line), "prepare") {
 		_, err := n1ql.Query(line)
+		fmt.Println("Im in here")
 		if err != nil {
 			return err
 		}
@@ -478,46 +510,90 @@ func N1QLCommandParser(line string, n1ql *sql.DB, w io.Writer) error {
 
 		} else {
 			iter := 0
+			rownum := 0
 
 			var werr error
-			_, werr = io.WriteString(w, "\n \"results\" :  [ ")
+			status := ""
+			var metrics []byte
+			metrics = nil
+			//_, werr = io.WriteString(w, "\n \"results\" :  [ ")
+			//Check if spacing is enough
+			_, werr = io.WriteString(w, "\n{\n")
 
 			for rows.Next() {
-				var results *json.RawMessage
+
+				if rownum == 0 {
+					rownum++
+
+					// Get the first row to post process.
+
+					extras, err := WriteHelper(rows)
+
+					if extras == nil && err != nil {
+						return err
+					}
+
+					var dat map[string]interface{}
+
+					if err := json.Unmarshal(extras, &dat); err != nil {
+						panic(err)
+					}
+					//fmt.Println("DEBUG OUTPUT OF ROW 1 : ", dat)
+					//num := dat["num"].(float64)
+					_, werr = io.WriteString(w, "\"requestID\": "+dat["requestID"].(string)+",\n")
+					//fmt.Sprintf(format, ...)
+					_, werr = io.WriteString(w, "\"signature\": "+fmt.Sprintf("%s", dat["signature"])+",\n")
+					_, werr = io.WriteString(w, "\"results\" : [\n\t")
+					status = dat["status"].(string)
+					continue
+				}
+
+				if rownum == 1 {
+					rownum++
+
+					// Get the second row to post process as the metrics
+					var err error
+					metrics, err = WriteHelper(rows)
+
+					if metrics == nil && err != nil {
+						return err
+					}
+
+					//Wait until all the rows have been written to write the metrics.
+
+					continue
+				}
 
 				if iter == 0 {
 					iter++
 				} else {
-					_, werr = io.WriteString(w, ", \n")
+					_, werr = io.WriteString(w, ", \n\t")
 				}
-				if err := rows.Scan(&results); err != nil {
+
+				result, err := WriteHelper(rows)
+				if result == nil && err != nil {
 					return err
 				}
-				b, err := results.MarshalJSON()
-				if err != nil {
-					return err
-				}
 
-				if *prettyFlag == true {
-					var dat map[string]interface{}
-					if err := json.Unmarshal(b, &dat); err != nil {
-						return err
-					}
+				_, werr = io.WriteString(w, "\t"+string(result))
 
-					b, err = json.MarshalIndent(dat, "", "  ")
-					if err != nil {
-						return err
-					}
-				}
-
-				_, werr = io.WriteString(w, string(b))
 			}
 			err = rows.Close()
 			if err != nil {
 				return err
 			}
 
-			_, werr = io.WriteString(w, " ] \n")
+			_, werr = io.WriteString(w, "\n\t],\n\t")
+			//Write the status and the metrics
+			if status != "" {
+				_, werr = io.WriteString(w, "\n\"status\": "+status)
+			}
+			if metrics != nil {
+				_, werr = io.WriteString(w, ",\n\"metrics\": ")
+				_, werr = io.WriteString(w, "\t"+string(metrics))
+			}
+
+			_, werr = io.WriteString(w, "\n}\n\n")
 
 			// For any captured write error
 			if werr != nil {
@@ -555,6 +631,7 @@ func ShellCommandParser(line string) error {
 
 	line = stringMinifier(line)
 
+	// Handle input strings to \echo command.
 	if strings.HasPrefix(line, "\\echo") {
 
 		count_param := strings.Count(line, "\"")
@@ -584,6 +661,14 @@ func ShellCommandParser(line string) error {
 		}
 	} else {
 		return errors.New("Command doesnt exist. Use help for command help.")
+	}
+
+	if (strings.HasPrefix(line, "\\source") || strings.HasPrefix(line, "\\load")) &&
+		command.FILEINPUT == true {
+
+		fmt.Println("ISHA DEBUG : FILENAME ", command.FILEINPUT)
+		//cmd_args[1:]
+
 	}
 
 	QUERYURL = command.QUERYURL
