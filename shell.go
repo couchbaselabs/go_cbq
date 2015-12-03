@@ -542,7 +542,11 @@ func N1QLCommandParser(line string, n1ql *sql.DB, w io.Writer) error {
 					//num := dat["num"].(float64)
 					_, werr = io.WriteString(w, "\"requestID\": \""+dat["requestID"].(string)+"\",\n")
 					//fmt.Sprintf(format, ...)
-					_, werr = io.WriteString(w, "\"signature\": "+fmt.Sprintf("%s", dat["signature"])+",\n")
+					jsonString, err := json.MarshalIndent(dat["signature"], "", "  ")
+					if err != nil {
+						return err
+					}
+					_, werr = io.WriteString(w, "\"signature\": "+string(jsonString)+",\n")
 					_, werr = io.WriteString(w, "\"results\" : [\n\t")
 					status = dat["status"].(string)
 					continue
