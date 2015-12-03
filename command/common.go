@@ -42,6 +42,11 @@ var (
 	}
 )
 
+type Credentials map[string]string
+type MyCred []Credentials
+
+var creds MyCred
+
 func init() {
 
 	/* Populate the Predefined user variable map with default
@@ -356,27 +361,27 @@ func PopValue_Helper(unset bool, param map[string]*Stack, vble string) (err erro
 
 }
 
-/*func ToCreds(credsFlag string) (creds MyCreds) {
+func ToCreds(credsFlag string) (MyCred, error) {
+
 	//Handle the input string of credentials.
 	//The string needs to be parsed into a byte array so as to pass to go_n1ql.
 	cred := strings.Split(credsFlag, ",")
+	var creds MyCred
+	creds = append(creds, Credentials{"user": "", "pass": ""})
 
 	/* Append input credentials in [{"user": <username>, "pass" : <password>}]
-	 format as expected by go_n1ql creds.
-
+	format as expected by go_n1ql creds.
+	*/
 	for _, i := range cred {
 		up := strings.Split(i, ":")
 		if len(up) < 2 {
 			// One of the input credentials is incorrect
 			err := errors.New("Username or Password missing in -credentials/-c option. Please check")
-
-			s_err := handleError(err, TiServer)
-			fmt.Println(fgRed, "ERROR", s_err.Code(), ":", s_err, reset)
-			os.Exit(1)
-
+			return nil, err
 		} else {
 			creds = append(creds, Credentials{"user": up[0], "pass": up[1]})
 		}
 	}
+	return creds, nil
 
-}*/
+}

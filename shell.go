@@ -234,8 +234,6 @@ func init() {
 /* Define credentials as user/pass and convert into
    JSON object credentials
 */
-type Credentials map[string]string
-type MyCred []Credentials
 
 var (
 	QUERYURL   string
@@ -299,7 +297,7 @@ func main() {
 	   the n1ql_creds. Append to creds so that user can also define
 	   bucket credentials using -credentials if they need to.
 	*/
-	var creds MyCred
+	var creds command.MyCred
 
 	if userFlag != "" {
 		fmt.Println("Enter Password: ")
@@ -310,7 +308,7 @@ func main() {
 				fmt.Println(fgRed, "ERROR", s_err.Code(), ":", s_err, reset)
 				os.Exit(1)
 			} else {
-				creds = append(creds, Credentials{"user": userFlag, "pass": string(password)})
+				creds = append(creds, command.Credentials{"user": userFlag, "pass": string(password)})
 			}
 		} else {
 			s_err := handleError(err, TiServer)
@@ -331,33 +329,23 @@ func main() {
 		fmt.Println("No Input Credentials. In order to connect to a server with authentication, please provide credentials.")
 
 	} else if credsFlag != "" {
-		//Handle the input string of credentials.
-		//The string needs to be parsed into a byte array so as to pass to go_n1ql.
-		cred := strings.Split(credsFlag, ",")
 
-		/* Append input credentials in [{"user": <username>, "pass" : <password>}]
-		   format as expected by go_n1ql creds.
-		*/
-		for _, i := range cred {
-			up := strings.Split(i, ":")
-			if len(up) < 2 {
-				// One of the input credentials is incorrect
-				err := errors.New("Username or Password missing in -credentials/-c option. Please check")
-
-				s_err := handleError(err, TiServer)
-				fmt.Println(fgRed, "ERROR", s_err.Code(), ":", s_err, reset)
-				os.Exit(1)
-
-			} else {
-				creds = append(creds, Credentials{"user": up[0], "pass": up[1]})
-			}
+		creds_ret, err := command.ToCreds(credsFlag)
+		if err != nil {
+			s_err := handleError(err, TiServer)
+			fmt.Println(fgRed, "ERROR", s_err.Code(), ":", s_err, reset)
 		}
+		for _, v := range creds_ret {
+			creds = append(creds, v)
+		}
+
 	}
 	//Append empty credentials. This is used for cases where one of the buckets
 	//is a SASL bucket, and we need to access the other unprotected buckets.
 	//CBauth works this way.
-
-	creds = append(creds, Credentials{"user": "", "pass": ""})
+	if credsFlag == "" && userFlag != "" {
+		creds = append(creds, command.Credentials{"user": "", "pass": ""})
+	}
 
 	/* Add the credentials set by -user and -credentials to the
 	   go_n1ql creds parameter.

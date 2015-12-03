@@ -77,26 +77,18 @@ func (this *Set) ParseCommand(queryurl []string) error {
 				/* Define credentials as user/pass and convert into
 				   JSON object credentials
 				*/
-				type Credentials map[string]string
-				type MyCred []Credentials
+
 				var creds MyCred
 
-				cred := strings.Split(queryurl[1], ",")
-
-				/* Append input credentials in [{"user": <username>, "pass" : <password>}]
-				   format as expected by go_n1ql creds.
-				*/
-				for _, i := range cred {
-					up := strings.Split(i, ":")
-					if len(up) < 2 {
-						// One of the input credentials is incorrect
-						err := errors.New("Username or Password missing in -credentials/-c option. Please check")
-						return err
-					} else {
-						creds = append(creds, Credentials{"user": up[0], "pass": up[1]})
-					}
+				creds_ret, err := ToCreds(queryurl[1])
+				if err != nil {
+					return err
 				}
-				creds = append(creds, Credentials{"user": "", "pass": ""})
+
+				for _, v := range creds_ret {
+					creds = append(creds, v)
+				}
+
 				ac, err := json.Marshal(creds)
 				if err != nil {
 					return err
