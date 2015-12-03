@@ -540,7 +540,7 @@ func N1QLCommandParser(line string, n1ql *sql.DB, w io.Writer) error {
 					}
 					//fmt.Println("DEBUG OUTPUT OF ROW 1 : ", dat)
 					//num := dat["num"].(float64)
-					_, werr = io.WriteString(w, "\"requestID\": "+dat["requestID"].(string)+",\n")
+					_, werr = io.WriteString(w, "\"requestID\": \""+dat["requestID"].(string)+"\",\n")
 					//fmt.Sprintf(format, ...)
 					_, werr = io.WriteString(w, "\"signature\": "+fmt.Sprintf("%s", dat["signature"])+",\n")
 					_, werr = io.WriteString(w, "\"results\" : [\n\t")
