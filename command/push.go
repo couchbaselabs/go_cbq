@@ -10,9 +10,12 @@
 package command
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
+
+	go_n1ql "github.com/couchbaselabs/go_n1ql"
 )
 
 /* Push Command */
@@ -99,6 +102,43 @@ func (this *Push) ParseCommand(queryurl []string) error {
 			err = PushValue_Helper(false, QueryParam, vble, queryurl[1])
 			if err != nil {
 				return err
+			}
+
+			if vble == "creds" {
+				/* Define credentials as user/pass and convert into
+				   JSON object credentials
+				*/
+
+				var creds MyCred
+
+				creds_ret, err := ToCreds(queryurl[1])
+				if err != nil {
+					return err
+				}
+
+				for _, v := range creds_ret {
+					creds = append(creds, v)
+				}
+
+				ac, err := json.Marshal(creds)
+				if err != nil {
+					return err
+				}
+				go_n1ql.SetQueryParams("creds", string(ac))
+
+			} else {
+				v, e := QueryParam[vble].Top()
+				if e != nil {
+					return err
+				}
+
+				val, err := ValToStr(v)
+				if err != nil {
+					return err
+				}
+				fmt.Println("DEBUG : QUERYPARAM : ", vble, " VALUE : ", val)
+				val = strings.Replace(val, "\"", "", 2)
+				go_n1ql.SetQueryParams(vble, val)
 			}
 
 		} else if strings.HasPrefix(queryurl[0], "$") {

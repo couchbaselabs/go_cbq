@@ -13,8 +13,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	go_n1ql "github.com/couchbaselabs/go_n1ql"
 	"strings"
+
+	go_n1ql "github.com/couchbaselabs/go_n1ql"
 )
 
 /* Set Command */
