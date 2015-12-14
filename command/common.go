@@ -13,12 +13,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	//"reflect"
-	//"strconv"
 	"strings"
 
 	"github.com/couchbase/query/value"
-	//"github.com/sbinet/liner"
+	go_n1ql "github.com/couchbaselabs/go_n1ql"
 )
 
 type PtrStrings *[]string
@@ -39,6 +37,7 @@ var (
 		"histfile":   Stack_Helper(),
 		"histsize":   Stack_Helper(),
 		"autoconfig": Stack_Helper(),
+		"state":      Stack_Helper(),
 	}
 )
 
@@ -384,4 +383,101 @@ func ToCreds(credsFlag string) (MyCred, error) {
 	}
 	return creds, nil
 
+}
+
+func PushOrSet(queryurl []string, pushvalue bool) error {
+	// Check what kind of parameter needs to be set or pushed
+	// depending on the pushvalue boolean value.
+	var err error = nil
+	if strings.HasPrefix(queryurl[0], "-$") {
+		// For Named Parameters
+		vble := queryurl[0]
+		vble = vble[2:]
+
+		err = PushValue_Helper(pushvalue, NamedParam, vble, queryurl[1])
+		if err != nil {
+			return err
+		}
+		//Pass the named parameters to the rest api using the SetQueryParams method
+		v, e := NamedParam[vble].Top()
+		if e != nil {
+			return err
+		}
+
+		val, err := ValToStr(v)
+		if err != nil {
+			return err
+		}
+		//fmt.Println("DEBUG : NMDPARAM : ", vble, " VALUE : ", val)
+		val = strings.Replace(val, "\"", "", 2)
+		vble = "$" + vble
+		go_n1ql.SetQueryParams(vble, val)
+
+	} else if strings.HasPrefix(queryurl[0], "-") {
+		// For query parameters
+		vble := queryurl[0]
+		vble = vble[1:]
+
+		err = PushValue_Helper(pushvalue, QueryParam, vble, queryurl[1])
+		if err != nil {
+			return err
+		}
+
+		if vble == "creds" {
+			// Define credentials as user/pass and convert into
+			//   JSON object credentials
+
+			var creds MyCred
+
+			creds_ret, err := ToCreds(queryurl[1])
+			if err != nil {
+				return err
+			}
+
+			for _, v := range creds_ret {
+				creds = append(creds, v)
+			}
+
+			ac, err := json.Marshal(creds)
+			if err != nil {
+				return err
+			}
+			//fmt.Println("Setting Creds : ", string(ac))
+			go_n1ql.SetQueryParams("creds", string(ac))
+
+		} else {
+			v, e := QueryParam[vble].Top()
+			if e != nil {
+				return err
+			}
+
+			val, err := ValToStr(v)
+			if err != nil {
+				return err
+			}
+			//fmt.Println("DEBUG : QUERYPARAM : ", vble, " VALUE : ", val)
+			val = strings.Replace(val, "\"", "", 2)
+			go_n1ql.SetQueryParams(vble, val)
+		}
+
+	} else if strings.HasPrefix(queryurl[0], "$") {
+		// For User defined session variables
+		vble := queryurl[0]
+		vble = vble[1:]
+
+		err = PushValue_Helper(pushvalue, UserDefSV, vble, queryurl[1])
+		if err != nil {
+			return err
+		}
+
+	} else {
+		// For Predefined session variables
+		vble := queryurl[0]
+
+		err = PushValue_Helper(pushvalue, PreDefSV, vble, queryurl[1])
+		if err != nil {
+			return err
+		}
+	}
+	return err
 }

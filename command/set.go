@@ -10,12 +10,8 @@
 package command
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
-	"strings"
-
-	go_n1ql "github.com/couchbaselabs/go_n1ql"
 )
 
 /* Set Command */
@@ -53,84 +49,9 @@ func (this *Set) ParseCommand(queryurl []string) error {
 		return errors.New("Too few arguments")
 	} else {
 		//Check what kind of parameter needs to be set.
-		// For query parameters
-		if strings.HasPrefix(queryurl[0], "-$") {
-			// For Named Parameters
-			vble := queryurl[0]
-			vble = vble[2:]
-
-			err = PushValue_Helper(true, NamedParam, vble, queryurl[1])
-			if err != nil {
-				return err
-			}
-
-		} else if strings.HasPrefix(queryurl[0], "-") {
-			// For query parameters
-			vble := queryurl[0]
-			vble = vble[1:]
-
-			err = PushValue_Helper(true, QueryParam, vble, queryurl[1])
-			if err != nil {
-				return err
-			}
-
-			if vble == "creds" {
-				/* Define credentials as user/pass and convert into
-				   JSON object credentials
-				*/
-
-				var creds MyCred
-
-				creds_ret, err := ToCreds(queryurl[1])
-				if err != nil {
-					return err
-				}
-
-				for _, v := range creds_ret {
-					creds = append(creds, v)
-				}
-
-				ac, err := json.Marshal(creds)
-				if err != nil {
-					return err
-				}
-				go_n1ql.SetQueryParams("creds", string(ac))
-
-			} else {
-				v, e := QueryParam[vble].Top()
-				if e != nil {
-					return err
-				}
-
-				val, err := ValToStr(v)
-				if err != nil {
-					return err
-				}
-				fmt.Println("DEBUG : QUERYPARAM : ", vble, " VALUE : ", val)
-				val = strings.Replace(val, "\"", "", 2)
-				go_n1ql.SetQueryParams(vble, val)
-			}
-
-			//QueryParam["credentials"]
-
-		} else if strings.HasPrefix(queryurl[0], "$") {
-			// For User defined session variables
-			vble := queryurl[0]
-			vble = vble[1:]
-
-			err = PushValue_Helper(true, UserDefSV, vble, queryurl[1])
-			if err != nil {
-				return err
-			}
-
-		} else {
-			// For Predefined session variables
-			vble := queryurl[0]
-
-			err = PushValue_Helper(true, PreDefSV, vble, queryurl[1])
-			if err != nil {
-				return err
-			}
+		err = PushOrSet(queryurl, true)
+		if err != nil {
+			return err
 		}
 	}
 	return err
