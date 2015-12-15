@@ -40,7 +40,7 @@ func (this *Unset) ParseCommand(queryurl []string) error {
 	/* Command to Unset the value of the given parameter.
 	 */
 	var err error
-	//fmt.Println("Isha Queryurl ", queryurl)
+
 	if len(queryurl) > this.MaxArgs() {
 		return errors.New("Too many arguments")
 	} else if len(queryurl) < this.MinArgs() {
@@ -68,8 +68,6 @@ func (this *Unset) ParseCommand(queryurl []string) error {
 				return err
 			}
 
-			//QueryParam["credentials"]
-
 		} else if strings.HasPrefix(queryurl[0], "$") {
 			// For User defined session variables
 			vble := queryurl[0]
@@ -94,9 +92,8 @@ func (this *Unset) ParseCommand(queryurl []string) error {
 }
 
 func (this *Unset) PrintHelp() {
-	fmt.Println("\\Unset <parameter>")
-	fmt.Println("Unset the value of the given parameter.")
-	fmt.Println("<parameter> = <prefix><name>")
-	fmt.Println(" For Example : \n\t \\Unset -$r \n\t \\Unset $Val ;")
+	fmt.Println("\\UNSET <parameter>")
+	fmt.Println("Unset the value of the given parameter. <parameter> = <prefix><name> ")
+	fmt.Println("\tExample : \n\t        \\Unset -$r ;\n\t        \\Unset $Val ;")
 	fmt.Println()
 }

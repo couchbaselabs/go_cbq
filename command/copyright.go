@@ -50,6 +50,6 @@ func (this *Copyright) ParseCommand(queryurl []string) error {
 func (this *Copyright) PrintHelp() {
 	fmt.Println("\\COPYRIGHT")
 	fmt.Println("Print Couchbase Copyright information")
-	fmt.Println(" For Example : \n\t \\COPYRIGHT;")
+	fmt.Println("\tExample : \n\t        \\COPYRIGHT;")
 	fmt.Println()
 }

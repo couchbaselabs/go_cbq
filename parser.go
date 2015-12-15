@@ -33,17 +33,9 @@ func execute_query(line string, w io.Writer) error {
 		}
 	}
 
-	// Set query parameters
-	//fmt.Println("Timeout value :" + timeoutFlag.String())
-	//os.Setenv("n1ql_timeout", timeoutFlag.String())
-
 	if strings.HasPrefix(line, "\\\\") {
 		commandkey := line[2:]
 		commandkey = strings.TrimSpace(commandkey)
-		//commandkey = commandkey[0]
-
-		//fmt.Println("Alias: ", commandkey)
-		//fmt.Println("Alias: ", reflect.TypeOf(commandkey))
 
 		val, ok := command.AliasCommand[commandkey]
 
@@ -151,7 +143,7 @@ func N1QLCommandParser(line string, n1ql *sql.DB, w io.Writer) error {
 			status := ""
 			var metrics []byte
 			metrics = nil
-			//_, werr = io.WriteString(w, "\n \"results\" :  [ ")
+
 			//Check if spacing is enough
 			_, werr = io.WriteString(w, "\n{\n")
 
@@ -173,10 +165,9 @@ func N1QLCommandParser(line string, n1ql *sql.DB, w io.Writer) error {
 					if err := json.Unmarshal(extras, &dat); err != nil {
 						panic(err)
 					}
-					//fmt.Println("DEBUG OUTPUT OF ROW 1 : ", dat)
-					//num := dat["num"].(float64)
+
 					_, werr = io.WriteString(w, "\"requestID\": \""+dat["requestID"].(string)+"\",\n")
-					//fmt.Sprintf(format, ...)
+
 					jsonString, err := json.MarshalIndent(dat["signature"], "", "  ")
 					if err != nil {
 						return err
@@ -199,7 +190,6 @@ func N1QLCommandParser(line string, n1ql *sql.DB, w io.Writer) error {
 					}
 
 					//Wait until all the rows have been written to write the metrics.
-
 					continue
 				}
 
@@ -305,8 +295,6 @@ func ShellCommandParser(line string) error {
 		command.FILEINPUT == true {
 
 		fmt.Println("ISHA DEBUG : FILENAME ", command.FILEINPUT)
-		//cmd_args[1:]
-
 	}
 
 	QUERYURL = command.QUERYURL

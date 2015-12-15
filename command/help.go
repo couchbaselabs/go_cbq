@@ -69,7 +69,7 @@ func (this *Help) ParseCommand(v []string) error {
 
 func (this *Help) PrintHelp() {
 	fmt.Println("\\HELP [<args>]")
-	fmt.Println("The input arguments are shell commands. If a * is input then the command displays HELP information for all input shell commands")
-	fmt.Println(" For Example : \n\t \\HELP VERSION; \n\t \\HELP EXIT DISCONNECT VERSION; \n\t \\HELP;")
+	fmt.Println("The input arguments are shell commands. If a * is input then the command displays HELP information for all input shell commands.")
+	fmt.Println("\tExample : \n\t        \\HELP VERSION; \n\t        \\HELP EXIT DISCONNECT VERSION; \n\t        \\HELP;")
 	fmt.Println()
 }

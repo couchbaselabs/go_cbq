@@ -65,9 +65,8 @@ func (this *Unalias) ParseCommand(queryurl []string) error {
 }
 
 func (this *Unalias) PrintHelp() {
-	fmt.Println("\\Unalias <command name> <command>")
-	fmt.Println("Create a command Unalias for a shell command or query.")
-	fmt.Println(" <command> = <shell command> or \t <query statement>")
-	fmt.Println(" For Example : \n  \\Unalias serverversion \"select version(), min_version()\" ;\n  \\Unalias \"\\SET -max-parallelism 8\"")
+	fmt.Println("\\UNALIAS <alias name>")
+	fmt.Println("Delete the alias given by <alias name>.")
+	fmt.Println("\tExample : \n\t        \\Unalias serverversion;\n\t        \\Unalias subcommand1 subcommand2 serverversion;")
 	fmt.Println()
 }

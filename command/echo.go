@@ -41,7 +41,6 @@ func (this *Echo) MaxArgs() int {
 }
 
 func (this *Echo) ParseCommand(queryurl []string) error {
-	//var quotestr = false
 
 	if len(queryurl) > this.MaxArgs() {
 
@@ -53,30 +52,25 @@ func (this *Echo) ParseCommand(queryurl []string) error {
 
 		for _, val := range queryurl {
 
-			//fmt.Println("DEBUG : value going in to Resolve : ", val)
 			v, err := Resolve(val)
 			if err != nil {
 				return err
 			}
 
-			//fmt.Println("DEBUG : value coming out of Resolve : ", v)
-
 			if v.Type() == value.STRING {
 
 				io.WriteString(W, fmt.Sprintf("%s", v))
 				io.WriteString(W, " ")
-				//fmt.Println("In here  ")
+
 			} else {
 
 				tmp, err := ValToStr(v)
-				//fmt.Println("DEBUG : value coming out of ValtoStr : ", tmp)
 
 				if err != nil {
 					return err
 				}
 				io.WriteString(W, string(tmp))
 				io.WriteString(W, " ")
-				//fmt.Println("NOOO In here  ")
 			}
 		}
 	}
@@ -88,8 +82,7 @@ func (this *Echo) ParseCommand(queryurl []string) error {
 
 func (this *Echo) PrintHelp() {
 	fmt.Println("\\ECHO <arg>")
-	fmt.Println("Echo the value of the input")
-	fmt.Println(" <arg> = <prefix><name> (a parameter)or \n <arg> = <alias> or (command alias)\n <arg> = <input> (any input statement) ")
-	fmt.Println(" For Example : \n  \\ECHO -$r ;\n  \\ECHO \\Com; \n  ")
+	fmt.Println("Echo the value of the input. <arg> = <prefix><name> (a parameter) or \n <arg> = <alias> (command alias) or \n <arg> = <input> (any input statement) ")
+	fmt.Println("\tExample : \n\t        \\ECHO -$r ;\n\t        \\ECHO \\Com; ")
 	fmt.Println()
 }

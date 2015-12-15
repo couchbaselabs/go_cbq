@@ -54,6 +54,6 @@ func (this *ExitorQuit) ParseCommand(queryurl []string) error {
 func (this *ExitorQuit) PrintHelp() {
 	fmt.Println("\\EXIT; OR QUIT;")
 	fmt.Println("Exit the shell")
-	fmt.Println(" For Example : \n\t \\EXIT; \n\t \\QUIT;")
+	fmt.Println("\tExample : \n\t        \\EXIT; \n\t        \\QUIT;")
 	fmt.Println()
 }

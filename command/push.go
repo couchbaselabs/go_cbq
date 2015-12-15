@@ -89,9 +89,8 @@ func (this *Push) ParseCommand(queryurl []string) error {
 
 func (this *Push) PrintHelp() {
 	fmt.Println("\\PUSH [<parameter> <value>]")
-	fmt.Println("Push the value of the given parameter to the input parameter stack")
-	fmt.Println("<parameter> = <prefix><name>")
-	fmt.Println(" For Example : \n\t \\PUSH -$r 9.5 \n\t \\PUSH $Val -$r ; \n\t \\PUSH ;")
+	fmt.Println("Push the value of the given parameter to the input parameter stack. <parameter> = <prefix><name>")
+	fmt.Println("\tExample : \n\t        \\PUSH -$r 9.5 ;\n\t        \\PUSH $Val -$r; \n\t        \\PUSH ;")
 	fmt.Println()
 }
 

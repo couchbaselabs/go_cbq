@@ -42,7 +42,7 @@ func (this *Set) ParseCommand(queryurl []string) error {
 	   or more than 1 argument then throw an error.
 	*/
 	var err error
-	//fmt.Println("Isha Queryurl ", queryurl)
+
 	if len(queryurl) > this.MaxArgs() {
 		return errors.New("Too many arguments")
 	} else if len(queryurl) < this.MinArgs() {
@@ -59,8 +59,7 @@ func (this *Set) ParseCommand(queryurl []string) error {
 
 func (this *Set) PrintHelp() {
 	fmt.Println("\\SET <parameter> <value>")
-	fmt.Println("Set the value of the given parameter to the input value")
-	fmt.Println("<parameter> = <prefix><name>")
-	fmt.Println(" For Example : \n\t \\SET -$r 9.5 \n\t \\SET $Val -$r ;")
+	fmt.Println("Set the value of the given parameter to the input value. <parameter> = <prefix><name>")
+	fmt.Println("\tExample : \n\t        \\SET -$r 9.5 ;\n\t        \\SET $Val -$r ;")
 	fmt.Println()
 }

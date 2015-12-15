@@ -51,6 +51,6 @@ func (this *Version) ParseCommand(queryurl []string) error {
 func (this *Version) PrintHelp() {
 	fmt.Println("\\VERSION")
 	fmt.Println("Print the Shell Version")
-	fmt.Println(" For Example : \n\t \\VERSION;")
+	fmt.Println("\tExample : \n\t        \\VERSION;")
 	fmt.Println()
 }

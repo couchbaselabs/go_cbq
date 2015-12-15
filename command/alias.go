@@ -40,8 +40,6 @@ func (this *Alias) MaxArgs() int {
 
 func (this *Alias) ParseCommand(queryurl []string) error {
 
-	//fmt.Println("AAAAA: ", queryurl)
-
 	if len(queryurl) > this.MaxArgs() {
 
 		return errors.New("Too many arguments. Quote second input argument")
@@ -51,7 +49,7 @@ func (this *Alias) ParseCommand(queryurl []string) error {
 			if len(AliasCommand) == 0 {
 				io.WriteString(W, "There are no defined command aliases. Use \\ALIAS <name> <value> to define.\n")
 			}
-			//io.WriteString(W, "Alias \t Value\n")
+
 			for k, v := range AliasCommand {
 
 				tmp := fmt.Sprintf("%-14s %-14s\n", k, v)
@@ -64,10 +62,6 @@ func (this *Alias) ParseCommand(queryurl []string) error {
 
 	} else {
 		value := strings.Join(queryurl[1:], " ")
-
-		//fmt.Println("BBBBB: ", value)
-
-		//fmt.Println("AAAAA: ", queryurl)
 
 		//Add this to the map for Aliases
 		key := queryurl[0]
@@ -85,8 +79,7 @@ func (this *Alias) ParseCommand(queryurl []string) error {
 
 func (this *Alias) PrintHelp() {
 	fmt.Println("\\ALIAS <command name> <command>")
-	fmt.Println("Create a command alias for a shell command or query.")
-	fmt.Println(" <command> = <shell command> or \t <query statement>")
-	fmt.Println(" For Example : \n  \\ALIAS serverversion \"select version(), min_version()\" ;\n  \\ALIAS \"\\SET -max-parallelism 8\"")
+	fmt.Println("Create a command alias for a shell command or query. <command> = <shell command> or <query statement>")
+	fmt.Println("\tExample : \n\t        \\ALIAS serverversion \"select version(), min_version()\" ;\n\t        \\ALIAS \"\\SET -max-parallelism 8\";")
 	fmt.Println()
 }

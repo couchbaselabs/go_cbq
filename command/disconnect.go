@@ -53,6 +53,6 @@ func (this *Disconnect) ParseCommand(queryurl []string) error {
 func (this *Disconnect) PrintHelp() {
 	fmt.Println("\\DISCONNECT;")
 	fmt.Println("Disconnect from the query service or cluster endpoint url.")
-	fmt.Println(" For Example : \n\t \\DISCONNECT;")
+	fmt.Println("\tExample : \n\t        \\DISCONNECT;")
 	fmt.Println()
 }

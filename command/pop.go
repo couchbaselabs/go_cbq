@@ -39,7 +39,7 @@ func (this *Pop) MaxArgs() int {
 func (this *Pop) ParseCommand(queryurl []string) error {
 
 	var err error
-	//fmt.Println("Isha Queryurl ", queryurl)
+
 	if len(queryurl) > this.MaxArgs() {
 		return errors.New("Too many arguments")
 	} else if len(queryurl) < this.MinArgs() {
@@ -120,10 +120,9 @@ func (this *Pop) ParseCommand(queryurl []string) error {
 }
 
 func (this *Pop) PrintHelp() {
-	fmt.Println("\\Pop [<parameter>]")
-	fmt.Println("Pop the value of the given parameter from the input parameter stack")
-	fmt.Println("<parameter> = <prefix><name>")
-	fmt.Println(" For Example : \n\t \\Pop -$r \n\t \\Pop $Val ; \n\t \\Pop ;")
+	fmt.Println("\\POP [<parameter>]")
+	fmt.Println("Pop the value of the given parameter from the input parameter stack. <parameter> = <prefix><name>")
+	fmt.Println("\tExample : \n\t        \\Pop -$r ;\n\t        \\Pop $Val ; \n\t        \\Pop ;")
 	fmt.Println()
 }
 

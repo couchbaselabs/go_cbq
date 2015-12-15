@@ -55,7 +55,7 @@ func (this *Connect) ParseCommand(queryurl []string) error {
 func (this *Connect) PrintHelp() {
 	fmt.Println("\\CONNECT <url>")
 	fmt.Println("Connect to the query service or cluster endpoint url.")
-	fmt.Println("\n\t\t Default : http://localhost:8091 \n\t\t \\CONNECT https://my.secure.node.com:8093 ; \n\t\t Connects to query node at my.secure.node.com:8093 using secure https protocol.")
-	fmt.Println(" For Example : \n\t \\CONNECT http://172.6.23.2:8091 ;")
+	fmt.Println("Default : http://localhost:8091")
+	fmt.Println("\tExample : \n\t        \\CONNECT http://172.6.23.2:8091 ; \n\t         \\CONNECT https://my.secure.node.com:8093 ;")
 	fmt.Println()
 }
