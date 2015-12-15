@@ -48,7 +48,7 @@ func execute_query(line string, w io.Writer) error {
 		val, ok := command.AliasCommand[commandkey]
 
 		if !ok {
-			return errors.New("\nAlias " + commandkey + " doesnt exist." + val + "\n")
+			return errors.New("Alias " + commandkey + " doesnt exist." + val + "\n")
 		}
 
 		err := execute_query(val, w)

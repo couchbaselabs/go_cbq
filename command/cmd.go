@@ -19,6 +19,7 @@ var (
 	QUERYURL   = ""
 	DISCONNECT = false
 	EXIT       = false
+	FILEINPUT  = false
 )
 
 var W io.Writer
@@ -42,12 +43,13 @@ var COMMAND_LIST = map[string]ShellCommand{
 	"\\copyright": &Copyright{},
 
 	/* Session Management */
-	"\\set":   &Set{},
-	"\\push":  &Push{},
-	"\\pop":   &Pop{},
-	"\\unset": &Unset{},
-	"\\echo":  &Echo{},
-	"\\alias": &Alias{},
+	"\\set":     &Set{},
+	"\\push":    &Push{},
+	"\\pop":     &Pop{},
+	"\\unset":   &Unset{},
+	"\\echo":    &Echo{},
+	"\\alias":   &Alias{},
+	"\\unalias": &Unalias{},
 }
 
 /*
