@@ -15,6 +15,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"sort"
 	"strings"
 	"unicode"
 
@@ -96,23 +97,82 @@ func execute_query(line string, w io.Writer) error {
 	return nil
 }
 
-func WriteHelper(rows *sql.Rows) ([]byte, error) {
-	var results *json.RawMessage
-	if err := rows.Scan(&results); err != nil {
+func WriteHelper(rows *sql.Rows, columns []string, values, valuePtrs []interface{}, rownum int) ([]byte, error) {
+	//Scan the values into the respective columns
+	if err := rows.Scan(valuePtrs...); err != nil {
 		return nil, err
 	}
-	b, err := results.MarshalJSON()
-	if err != nil {
-		return nil, err
+
+	dat := map[string]*json.RawMessage{}
+	var c []byte = nil
+	var b []byte = nil
+	var err error = nil
+
+	for i, col := range columns {
+		var parsed *json.RawMessage
+
+		val := values[i]
+		b, _ := val.([]byte)
+
+		if string(b) != "" {
+			//Parse the sub values of the main map first.
+			json.Unmarshal(b, &parsed)
+
+			//Fill up final result object
+			dat[col] = parsed
+
+		} else {
+			continue
+		}
+
+		//Remove one level of nesting for the results when we have only 1 column to project.
+		if len(columns) == 1 {
+			c, err = dat[col].MarshalJSON()
+			if err != nil {
+				return nil, err
+			}
+		}
+
+	}
+
+	b = nil
+	err = nil
+
+	if rownum == 0 || rownum == 1 {
+		keys := make([]string, 0, len(dat))
+		for key, _ := range dat {
+			keys = append(keys, key)
+		}
+		sort.Strings(keys)
+
+		if keys != nil {
+			map_value := dat[keys[0]]
+			b, err = map_value.MarshalJSON()
+			if err != nil {
+				return nil, err
+			}
+
+		}
+
+	} else {
+		if len(columns) != 1 {
+			b, err = json.Marshal(dat)
+			if err != nil {
+				return nil, err
+			}
+		} else {
+			b = c
+		}
+
 	}
 
 	if *prettyFlag == true {
-		var dat map[string]interface{}
-		if err := json.Unmarshal(b, &dat); err != nil {
+		var data map[string]interface{}
+		if err := json.Unmarshal(b, &data); err != nil {
 			return nil, err
 		}
 
-		b, err = json.MarshalIndent(dat, "", "  ")
+		b, err = json.MarshalIndent(data, "        ", "    ")
 		if err != nil {
 			return nil, err
 		}
@@ -144,17 +204,26 @@ func N1QLCommandParser(line string, n1ql *sql.DB, w io.Writer) error {
 			var metrics []byte
 			metrics = nil
 
+			// Multi column projection
+			columns, _ := rows.Columns()
+			count := len(columns)
+			values := make([]interface{}, count)
+			valuePtrs := make([]interface{}, count)
+
 			//Check if spacing is enough
 			_, werr = io.WriteString(w, "\n{\n")
 
 			for rows.Next() {
 
+				for i, _ := range columns {
+					valuePtrs[i] = &values[i]
+				}
+
 				if rownum == 0 {
-					rownum++
 
 					// Get the first row to post process.
 
-					extras, err := WriteHelper(rows)
+					extras, err := WriteHelper(rows, columns, values, valuePtrs, rownum)
 
 					if extras == nil && err != nil {
 						return err
@@ -163,33 +232,35 @@ func N1QLCommandParser(line string, n1ql *sql.DB, w io.Writer) error {
 					var dat map[string]interface{}
 
 					if err := json.Unmarshal(extras, &dat); err != nil {
-						panic(err)
+						return err
 					}
 
-					_, werr = io.WriteString(w, "\"requestID\": \""+dat["requestID"].(string)+"\",\n")
+					_, werr = io.WriteString(w, "    \"requestID\": \""+dat["requestID"].(string)+"\",\n")
 
-					jsonString, err := json.MarshalIndent(dat["signature"], "", "  ")
+					jsonString, err := json.MarshalIndent(dat["signature"], "        ", "    ")
+
 					if err != nil {
 						return err
 					}
-					_, werr = io.WriteString(w, "\"signature\": "+string(jsonString)+",\n")
-					_, werr = io.WriteString(w, "\"results\" : [\n\t")
+					_, werr = io.WriteString(w, "    \"signature\": "+string(jsonString)+",\n")
+					_, werr = io.WriteString(w, "    \"results\" : [\n\t")
 					status = dat["status"].(string)
+					rownum++
 					continue
 				}
 
 				if rownum == 1 {
-					rownum++
 
 					// Get the second row to post process as the metrics
 					var err error
-					metrics, err = WriteHelper(rows)
+					metrics, err = WriteHelper(rows, columns, values, valuePtrs, rownum)
 
 					if metrics == nil && err != nil {
 						return err
 					}
 
 					//Wait until all the rows have been written to write the metrics.
+					rownum++
 					continue
 				}
 
@@ -199,30 +270,33 @@ func N1QLCommandParser(line string, n1ql *sql.DB, w io.Writer) error {
 					_, werr = io.WriteString(w, ", \n\t")
 				}
 
-				result, err := WriteHelper(rows)
+				result, err := WriteHelper(rows, columns, values, valuePtrs, rownum)
 				if result == nil && err != nil {
 					return err
 				}
 
-				_, werr = io.WriteString(w, "\t"+string(result))
+				_, werr = io.WriteString(w, string(result))
 
 			}
+
 			err = rows.Close()
 			if err != nil {
 				return err
 			}
 
-			_, werr = io.WriteString(w, "\n\t],\n\t")
+			//Suffix to result array
+			_, werr = io.WriteString(w, "\n    ],")
+
 			//Write the status and the metrics
 			if status != "" {
-				_, werr = io.WriteString(w, "\n\"status\": "+status)
+				_, werr = io.WriteString(w, "\n    \"status\": \""+status+"\"")
 			}
 			if metrics != nil {
-				_, werr = io.WriteString(w, ",\n\"metrics\": ")
-				_, werr = io.WriteString(w, "\t"+string(metrics))
+				_, werr = io.WriteString(w, ",\n    \"metrics\": ")
+				_, werr = io.WriteString(w, string(metrics))
 			}
 
-			_, werr = io.WriteString(w, "\n}\n\n")
+			_, werr = io.WriteString(w, "\n}\n")
 
 			// For any captured write error
 			if werr != nil {
