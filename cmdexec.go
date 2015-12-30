@@ -75,7 +75,7 @@ func execute_input(line string, w io.Writer) error {
 			n1ql, err := sql.Open("n1ql", ServerFlag)
 			if err != nil {
 				tmpstr := fmt.Sprintln(fgRed, "Error in sql Open", reset)
-				io.WriteString(w, tmpstr)
+				io.WriteString(w, tmpstr+"\n")
 				return err
 			} else {
 				//Successfully logged into the server

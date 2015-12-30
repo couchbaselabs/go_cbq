@@ -49,8 +49,10 @@ func (this *Version) ExecCommand(args []string) error {
 	return nil
 }
 
-func (this *Version) PrintHelp() {
-	io.WriteString(W, "\\VERSION")
-	printDesc(this.Name())
+func (this *Version) PrintHelp(desc bool) {
+	io.WriteString(W, "\\VERSION\n")
+	if desc {
+		printDesc(this.Name())
+	}
 	io.WriteString(W, "\n")
 }

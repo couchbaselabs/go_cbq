@@ -82,8 +82,10 @@ func (this *Echo) ExecCommand(args []string) error {
 
 }
 
-func (this *Echo) PrintHelp() {
-	io.WriteString(W, "\\ECHO <arg>...")
-	printDesc(this.Name())
+func (this *Echo) PrintHelp(desc bool) {
+	io.WriteString(W, "\\ECHO <arg>...\n")
+	if desc {
+		printDesc(this.Name())
+	}
 	io.WriteString(W, "\n")
 }

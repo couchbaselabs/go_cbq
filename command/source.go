@@ -56,8 +56,10 @@ func (this *Source) ExecCommand(args []string) error {
 	return nil
 }
 
-func (this *Source) PrintHelp() {
-	io.WriteString(W, "\\Source <filename>")
-	printDesc(this.Name())
+func (this *Source) PrintHelp(desc bool) {
+	io.WriteString(W, "\\SOURCE <filename>\n")
+	if desc {
+		printDesc(this.Name())
+	}
 	io.WriteString(W, "\n")
 }

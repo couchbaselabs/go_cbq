@@ -139,12 +139,12 @@ func HandleInteractiveMode(prompt string) {
 				if err != nil {
 					s_err := handleError(err, ServerFlag)
 					tmpstr := fmt.Sprintln(fgRed, "ERROR", s_err.Code(), ":", s_err, reset)
-					io.WriteString(command.W, tmpstr)
+					io.WriteString(command.W, tmpstr+"\n")
 
 					if *errorExitFlag == true {
 						if first == false {
 							first = true
-							io.WriteString(command.W, "Exiting on first error encountered")
+							io.WriteString(command.W, "Exiting on first error encountered\n")
 							liner.Close()
 							os.Clearenv()
 							os.Exit(1)

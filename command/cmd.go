@@ -89,5 +89,5 @@ type ShellCommand interface {
 	/* Method that implements the functionality */
 	ExecCommand(args []string) error
 	/* Print Help information for command and its usage with an example */
-	PrintHelp()
+	PrintHelp(desc bool)
 }

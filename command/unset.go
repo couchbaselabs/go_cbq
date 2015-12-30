@@ -93,8 +93,10 @@ func (this *Unset) ExecCommand(args []string) error {
 	return err
 }
 
-func (this *Unset) PrintHelp() {
-	io.WriteString(W, "\\UNSET <parameter>")
-	printDesc(this.Name())
+func (this *Unset) PrintHelp(desc bool) {
+	io.WriteString(W, "\\UNSET <parameter>\n")
+	if desc {
+		printDesc(this.Name())
+	}
 	io.WriteString(W, "\n")
 }

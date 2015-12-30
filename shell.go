@@ -245,7 +245,7 @@ func main() {
 		if err != nil {
 			s_err := handleError(err, ServerFlag)
 			s := fmt.Sprintln(fgRed, "ERROR", s_err.Code(), ":", s_err, reset)
-			io.WriteString(command.W, s)
+			io.WriteString(command.W, s+"\n")
 			os.Exit(1)
 		}
 		os.Exit(0)
@@ -306,7 +306,7 @@ func main() {
 			if string(password) == "" {
 				s_err := handleError(errors.New("Empty password string."), ServerFlag)
 				s := fmt.Sprintln(fgRed, "ERROR", s_err.Code(), ":", s_err, reset)
-				io.WriteString(command.W, s)
+				io.WriteString(command.W, s+"\n")
 				os.Exit(1)
 			} else {
 				creds = append(creds, command.Credential{"user": userFlag, "pass": string(password)})
@@ -314,7 +314,7 @@ func main() {
 		} else {
 			s_err := handleError(err, ServerFlag)
 			s := fmt.Sprintln(fgRed, "ERROR", s_err.Code(), ":", s_err, reset)
-			io.WriteString(command.W, s)
+			io.WriteString(command.W, s+"\n")
 			os.Exit(1)
 		}
 	}
@@ -328,7 +328,7 @@ func main() {
 		/* No credentials exist. This can still be used to connect to
 		   un-authenticated servers.
 		*/
-		io.WriteString(command.W, "No Input Credentials. In order to connect to a server with authentication, please provide credentials.")
+		io.WriteString(command.W, "No Input Credentials. In order to connect to a server with authentication, please provide credentials.\n")
 
 	} else if credsFlag != "" {
 
@@ -336,7 +336,7 @@ func main() {
 		if err != nil {
 			s_err := handleError(err, ServerFlag)
 			s := fmt.Sprintln(fgRed, "ERROR", s_err.Code(), ":", s_err, reset)
-			io.WriteString(command.W, s)
+			io.WriteString(command.W, s+"\n")
 		}
 		for _, v := range creds_ret {
 			creds = append(creds, v)
@@ -360,7 +360,7 @@ func main() {
 			//Error while Marshalling
 			s_err := handleError(err, ServerFlag)
 			s := fmt.Sprintln(fgRed, "ERROR", s_err.Code(), ":", s_err, reset)
-			io.WriteString(command.W, s)
+			io.WriteString(command.W, s+"\n")
 			os.Exit(1)
 		}
 		go_n1ql.SetQueryParams("creds", string(ac))

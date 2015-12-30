@@ -53,8 +53,10 @@ func (this *Connect) ExecCommand(args []string) error {
 	return nil
 }
 
-func (this *Connect) PrintHelp() {
-	io.WriteString(W, "\\CONNECT <url>")
-	printDesc(this.Name())
+func (this *Connect) PrintHelp(desc bool) {
+	io.WriteString(W, "\\CONNECT <url>\n")
+	if desc {
+		printDesc(this.Name())
+	}
 	io.WriteString(W, "\n")
 }

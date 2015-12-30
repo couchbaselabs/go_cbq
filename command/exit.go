@@ -45,14 +45,16 @@ func (this *Exit) ExecCommand(args []string) error {
 	if len(args) != 0 {
 		return errors.New("Too many arguments")
 	} else {
-		io.WriteString(W, "\n Exiting the shell.")
+		io.WriteString(W, "Exiting the shell.\n")
 		EXIT = true
 	}
 	return nil
 }
 
-func (this *Exit) PrintHelp() {
-	io.WriteString(W, "\\EXIT; OR QUIT;")
-	printDesc(this.Name())
+func (this *Exit) PrintHelp(desc bool) {
+	io.WriteString(W, "\\EXIT \n\\QUIT\n")
+	if desc {
+		printDesc(this.Name())
+	}
 	io.WriteString(W, "\n")
 }

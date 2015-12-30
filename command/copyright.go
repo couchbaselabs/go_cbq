@@ -47,8 +47,10 @@ func (this *Copyright) ExecCommand(args []string) error {
 	return nil
 }
 
-func (this *Copyright) PrintHelp() {
-	io.WriteString(W, "\\COPYRIGHT")
-	printDesc(this.Name())
+func (this *Copyright) PrintHelp(desc bool) {
+	io.WriteString(W, "\\COPYRIGHT\n")
+	if desc {
+		printDesc(this.Name())
+	}
 	io.WriteString(W, "\n")
 }

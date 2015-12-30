@@ -121,9 +121,11 @@ func (this *Pop) ExecCommand(args []string) error {
 	return nil
 }
 
-func (this *Pop) PrintHelp() {
-	io.WriteString(W, "\\POP [<parameter>]")
-	printDesc(this.Name())
+func (this *Pop) PrintHelp(desc bool) {
+	io.WriteString(W, "\\POP \n\\POP <parameter>\n")
+	if desc {
+		printDesc(this.Name())
+	}
 	io.WriteString(W, "\n")
 }
 

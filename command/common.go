@@ -53,22 +53,22 @@ func init() {
 
 	err = PushValue_Helper(false, PreDefSV, "histfile", "\".cbq_history\"")
 	if err != nil {
-		io.WriteString(W, err.Error())
+		io.WriteString(W, err.Error()+"\n")
 	}
 	err = PushValue_Helper(false, PreDefSV, "autoconfig", "false")
 	if err != nil {
-		io.WriteString(W, err.Error())
+		io.WriteString(W, err.Error()+"\n")
 	}
 
 	histlim := int(liner.HistoryLimit)
 	err = PushValue_Helper(false, PreDefSV, "histsize", strconv.Itoa(histlim))
 	if err != nil {
-		io.WriteString(W, err.Error())
+		io.WriteString(W, err.Error()+"\n")
 	}
 
 	err = PushValue_Helper(false, PreDefSV, "limit", "0")
 	if err != nil {
-		io.WriteString(W, err.Error())
+		io.WriteString(W, err.Error()+"\n")
 	}
 }
 
@@ -376,66 +376,68 @@ func PushOrSet(args []string, pushvalue bool) error {
 }
 
 func printDesc(cmdname string) {
+
 	switch cmdname {
 	case "ALIAS":
 		io.WriteString(W, "Create an alias for input. <command> = <shell command> or <query statement>\n")
 		io.WriteString(W, "\tExample : \n\t        \\ALIAS serverversion \"select version(), min_version()\" ;\n\t        \\ALIAS \"\\SET -max-parallelism 8\";\n")
 
 	case "CONNECT":
-		io.WriteString(W, "Connect to the query service or cluster endpoint url.")
-		io.WriteString(W, "Default : http://localhost:8091")
-		io.WriteString(W, "\tExample : \n\t        \\CONNECT http://172.6.23.2:8091 ; \n\t         \\CONNECT https://my.secure.node.com:8093 ;")
+		io.WriteString(W, "Connect to the query service or cluster endpoint url.\n")
+		io.WriteString(W, "Default : http://localhost:8091\n")
+		io.WriteString(W, "\tExample : \n\t        \\CONNECT http://172.6.23.2:8091 ; \n\t         \\CONNECT https://my.secure.node.com:8093 ;\n")
 
 	case "COPYRIGHT":
-		io.WriteString(W, "Print Couchbase Copyright information")
-		io.WriteString(W, "\tExample : \n\t        \\COPYRIGHT;")
+		io.WriteString(W, "Print Couchbase Copyright information\n")
+		io.WriteString(W, "\tExample : \n\t        \\COPYRIGHT;\n")
 
 	case "DISCONNECT":
-		io.WriteString(W, "Disconnect from the query service or cluster endpoint url.")
+		io.WriteString(W, "Disconnect from the query service or cluster endpoint url.\n")
 		io.WriteString(W, "\tExample : \n\t        \\DISCONNECT;")
 
 	case "ECHO":
-		io.WriteString(W, "Echo the value of the input. <arg> = <prefix><name> (a parameter) or \n <arg> = <alias> (command alias) or \n <arg> = <input> (any input statement) ")
-		io.WriteString(W, "\tExample : \n\t        \\ECHO -$r ;\n\t        \\ECHO \\Com; ")
+		io.WriteString(W, "Echo the value of the input. <arg> = <prefix><name> (a parameter) or \n <arg> = <alias> (command alias) or \n <arg> = <input> (any input statement) \n")
+		io.WriteString(W, "\tExample : \n\t        \\ECHO -$r ;\n\t        \\ECHO \\Com; \n")
 
 	case "EXIT":
-		io.WriteString(W, "Exit the shell")
-		io.WriteString(W, "\tExample : \n\t        \\EXIT; \n\t        \\QUIT;")
+		io.WriteString(W, "Exit the shell\n")
+		io.WriteString(W, "\tExample : \n\t        \\EXIT; \n\t        \\QUIT;\n")
 
 	case "HELP":
-		io.WriteString(W, "The input arguments are shell commands. If a * is input then the command displays HELP information for all input shell commands.")
-		io.WriteString(W, "\tExample : \n\t        \\HELP VERSION; \n\t        \\HELP EXIT DISCONNECT VERSION; \n\t        \\HELP;")
+		io.WriteString(W, "The input arguments are shell commands. If a * is input then the command displays HELP information for all input shell commands.\n")
+		io.WriteString(W, "\tExample : \n\t        \\HELP VERSION; \n\t        \\HELP EXIT DISCONNECT VERSION; \n\t        \\HELP;\n")
 
 	case "POP":
-		io.WriteString(W, "Pop the value of the given parameter from the input parameter stack. <parameter> = <prefix><name>")
-		io.WriteString(W, "\tExample : \n\t        \\Pop -$r ;\n\t        \\Pop $Val ; \n\t        \\Pop ;")
+		io.WriteString(W, "Pop the value of the given parameter from the input parameter stack. <parameter> = <prefix><name>\n")
+		io.WriteString(W, "\tExample : \n\t        \\Pop -$r ;\n\t        \\Pop $Val ; \n\t        \\Pop ;\n")
 
 	case "PUSH":
-		io.WriteString(W, "Push the value of the given parameter to the input parameter stack. <parameter> = <prefix><name>")
-		io.WriteString(W, "\tExample : \n\t        \\PUSH -$r 9.5 ;\n\t        \\PUSH $Val -$r; \n\t        \\PUSH ;")
+		io.WriteString(W, "Push the value of the given parameter to the input parameter stack. <parameter> = <prefix><name>\n")
+		io.WriteString(W, "\tExample : \n\t        \\PUSH -$r 9.5 ;\n\t        \\PUSH $Val -$r; \n\t        \\PUSH ;\n")
 
 	case "SET":
-		io.WriteString(W, "Set the value of the given parameter to the input value. <parameter> = <prefix><name>")
-		io.WriteString(W, "\tExample : \n\t        \\SET -$r 9.5 ;\n\t        \\SET $Val -$r ;")
+		io.WriteString(W, "Set the value of the given parameter to the input value. <parameter> = <prefix><name>\n")
+		io.WriteString(W, "\tExample : \n\t        \\SET -$r 9.5 ;\n\t        \\SET $Val -$r ;\n")
 
 	case "SOURCE":
-		io.WriteString(W, "Load input file into shell")
-		io.WriteString(W, " For Example : \n\t \\SOURCE temp1.txt ;")
+		io.WriteString(W, "Load input file into shell\n")
+		io.WriteString(W, " For Example : \n\t \\SOURCE temp1.txt ;\n")
 
 	case "UNALIAS":
-		io.WriteString(W, "Delete the alias given by <alias name>.")
-		io.WriteString(W, "\tExample : \n\t        \\UNALIAS serverversion;\n\t        \\UNALIAS subcommand1 subcommand2 serverversion;")
+		io.WriteString(W, "Delete the alias given by <alias name>.\n")
+		io.WriteString(W, "\tExample : \n\t        \\UNALIAS serverversion;\n\t        \\UNALIAS subcommand1 subcommand2 serverversion;\n")
 
 	case "UNSET":
-		io.WriteString(W, "Unset the value of the given parameter. <parameter> = <prefix><name> ")
-		io.WriteString(W, "\tExample : \n\t        \\Unset -$r ;\n\t        \\Unset $Val ;")
+		io.WriteString(W, "Unset the value of the given parameter. <parameter> = <prefix><name> \n")
+		io.WriteString(W, "\tExample : \n\t        \\Unset -$r ;\n\t        \\Unset $Val ;\n")
 
 	case "VERSION":
-		io.WriteString(W, "Print the Shell Version")
-		io.WriteString(W, "\tExample : \n\t        \\VERSION;")
+		io.WriteString(W, "Print the Shell Version\n")
+		io.WriteString(W, "\tExample : \n\t        \\VERSION;\n")
 
 	default:
-		io.WriteString(W, "IshaFix : Does not exist")
+		io.WriteString(W, "IshaFix : Does not exist\n")
 
 	}
+
 }

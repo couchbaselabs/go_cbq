@@ -88,9 +88,11 @@ func (this *Push) ExecCommand(args []string) error {
 	return err
 }
 
-func (this *Push) PrintHelp() {
-	io.WriteString(W, "\\PUSH <parameter> <value>")
-	printDesc(this.Name())
+func (this *Push) PrintHelp(desc bool) {
+	io.WriteString(W, "\\PUSH \n\\PUSH <parameter> <value>\n")
+	if desc {
+		printDesc(this.Name())
+	}
 	io.WriteString(W, "\n")
 }
 

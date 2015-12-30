@@ -42,7 +42,7 @@ func (this *Help) ExecCommand(args []string) error {
 	if len(args) == 0 {
 		io.WriteString(W, "Help Information for all Shell Commands")
 		for _, val := range COMMAND_LIST {
-			val.PrintHelp()
+			val.PrintHelp(false)
 		}
 	} else {
 		/* Input Command : \HELP SET \VERSION;
@@ -55,7 +55,7 @@ func (this *Help) ExecCommand(args []string) error {
 			}
 			cmd, ok := COMMAND_LIST[val]
 			if ok == true {
-				cmd.PrintHelp()
+				cmd.PrintHelp(true)
 			} else {
 				io.WriteString(W, "Command does not exist. Use \\HELP; to list help for all shell commands.")
 				return errors.New("Command does not exist")
@@ -66,8 +66,10 @@ func (this *Help) ExecCommand(args []string) error {
 	return nil
 }
 
-func (this *Help) PrintHelp() {
-	io.WriteString(W, "\\HELP <args>...")
-	printDesc(this.Name())
+func (this *Help) PrintHelp(desc bool) {
+	io.WriteString(W, "\\HELP \n\\HELP <args>...\n")
+	if desc {
+		printDesc(this.Name())
+	}
 	io.WriteString(W, "\n")
 }

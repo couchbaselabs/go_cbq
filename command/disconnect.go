@@ -51,8 +51,10 @@ func (this *Disconnect) ExecCommand(args []string) error {
 	return nil
 }
 
-func (this *Disconnect) PrintHelp() {
-	io.WriteString(W, "\\DISCONNECT;")
-	printDesc(this.Name())
+func (this *Disconnect) PrintHelp(desc bool) {
+	io.WriteString(W, "\\DISCONNECT\n")
+	if desc {
+		printDesc(this.Name())
+	}
 	io.WriteString(W, "\n")
 }

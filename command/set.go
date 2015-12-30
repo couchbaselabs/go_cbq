@@ -57,8 +57,10 @@ func (this *Set) ExecCommand(args []string) error {
 	return err
 }
 
-func (this *Set) PrintHelp() {
-	io.WriteString(W, "\\SET <parameter> <value>")
-	printDesc(this.Name())
+func (this *Set) PrintHelp(desc bool) {
+	io.WriteString(W, "\\SET <parameter> <value>\n")
+	if desc {
+		printDesc(this.Name())
+	}
 	io.WriteString(W, "\n")
 }
