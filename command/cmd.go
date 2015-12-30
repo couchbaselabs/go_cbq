@@ -9,33 +9,55 @@
 
 package command
 
-import "io"
+import (
+	"io"
+	"math"
+)
 
 const (
 	SHELL_VERSION = "1.0"
+
+	MAX_ARGS    = math.MaxInt16
+	MAX_ALIASES = math.MaxInt16
+	MAX_VARS    = math.MaxInt16
 )
 
 var (
-	QUERYURL   = ""
+	//Used to manage connections
+	SERVICE_URL = ""
+	//Used to disconnect from the endpoint
 	DISCONNECT = false
-	EXIT       = false
-	FILEINPUT  = false
+	//Used to quit shell
+	EXIT = false
+	//Used to check for files
+	FILE_INPUT = false
+	//Total no. of commands
+	MAX_COMMANDS = len(COMMAND_LIST)
+	//Total number of
 )
 
+/*
+	Define a common writer to output the responses to.
+*/
 var W io.Writer
 
+/*
+	Used to define aliases
+*/
 var AliasCommand = map[string]string{
 	"serverversion": "select version()",
 }
 
-/* Command registry : List of Shell Commands supported by cbq */
+/*
+	Command registry : List of Shell Commands supported by cbq
+*/
 var COMMAND_LIST = map[string]ShellCommand{
 
 	/* Connection Management */
 	"\\connect":    &Connect{},
 	"\\disconnect": &Disconnect{},
-	"\\exit":       &ExitorQuit{},
-	"\\quit":       &ExitorQuit{},
+	"\\exit":       &Exit{},
+	"\\quit":       &Exit{},
 
 	/* Shell and Server Information */
 	"\\help":      &Help{},
@@ -64,8 +86,8 @@ type ShellCommand interface {
 	MinArgs() int
 	/* Returns the Maximum number of input arguments allowed by the function */
 	MaxArgs() int
-	/* Method that implements the functionality*/
-	ParseCommand(v []string) error
+	/* Method that implements the functionality */
+	ExecCommand(args []string) error
 	/* Print Help information for command and its usage with an example */
 	PrintHelp()
 }

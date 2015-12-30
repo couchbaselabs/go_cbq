@@ -12,49 +12,52 @@ package command
 import (
 	"errors"
 	"io"
+	//"github.com/sbinet/liner"
 )
 
-/* Connect Command */
-type Connect struct {
+/* Source Command */
+type Source struct {
 	ShellCommand
 }
 
-func (this *Connect) Name() string {
-	return "CONNECT"
+func (this *Source) Name() string {
+	return "SOURCE"
 }
 
-func (this *Connect) CommandCompletion() bool {
+func (this *Source) CommandCompletion() bool {
 	return false
 }
 
-func (this *Connect) MinArgs() int {
+func (this *Source) MinArgs() int {
 	return 1
 }
 
-func (this *Connect) MaxArgs() int {
+func (this *Source) MaxArgs() int {
 	return 1
 }
 
-func (this *Connect) ExecCommand(args []string) error {
-	/* Command to connect to the input query service or cluster
-	   endpoint. Use the Server flag and set it to the value
-	   of service_url. If the command contains no input argument
-	   or more than 1 argument then throw an error.
-	*/
+func (this *Source) ExecCommand(args []string) error {
+	/* Command to load a file into the shell.
+	 */
 	if len(args) > this.MaxArgs() {
 		return errors.New("Too many arguments")
 
 	} else if len(args) < this.MinArgs() {
 		return errors.New("Too few arguments")
 	} else {
-		SERVICE_URL = args[0]
-		io.WriteString(W, "\nEndpoint to Connect to : "+SERVICE_URL+" . Type Ctrl-D / \\exit / \\quit to exit.\n")
+		/* This case needs to be handled in the ShellCommand
+		   in the main package, since we need to run each
+		   query as it is being read. Otherwise, if we load it
+		   into a buffer, we restrict the number of queries that
+		   can be loaded from the file.
+		*/
+		FILE_INPUT = true
 	}
 	return nil
 }
 
-func (this *Connect) PrintHelp() {
-	io.WriteString(W, "\\CONNECT <url>")
+func (this *Source) PrintHelp() {
+	io.WriteString(W, "\\Source <filename>")
 	printDesc(this.Name())
 	io.WriteString(W, "\n")
 }

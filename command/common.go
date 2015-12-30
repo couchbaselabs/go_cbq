@@ -13,19 +13,16 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
+	"strconv"
 	"strings"
 
 	"github.com/couchbase/query/value"
 	go_n1ql "github.com/couchbaselabs/go_n1ql"
+	"github.com/sbinet/liner"
 )
 
-type PtrStrings *[]string
-
-/* Helper function to create a stack. */
-func Stack_Helper() *Stack {
-	r := make(Stack, 0)
-	return &r
-}
+//type PtrStrings *[]string
 
 var (
 	QueryParam map[string]*Stack = map[string]*Stack{}
@@ -41,10 +38,10 @@ var (
 	}
 )
 
-type Credentials map[string]string
-type MyCred []Credentials
+type Credential map[string]string
+type Credentials []Credential
 
-var creds MyCred
+var creds Credentials
 
 func init() {
 
@@ -52,28 +49,27 @@ func init() {
 	   values.
 	*/
 
-	//err := PushValue_Helper(false, PreDefSV, "histfile", "\".cbq_history\"")
-	//if err != nil {
-	//	fmt.Println(err)
-	//}
+	var err error
 
-	/*v, _ := Resolve("\".cbq_history\"")
-	PreDefSV["histfile"].Push(v)
-
-	v, _ = Resolve("false")
-	PreDefSV["autoconfig"].Push(v)
+	err = PushValue_Helper(false, PreDefSV, "histfile", "\".cbq_history\"")
+	if err != nil {
+		io.WriteString(W, err.Error())
+	}
+	err = PushValue_Helper(false, PreDefSV, "autoconfig", "false")
+	if err != nil {
+		io.WriteString(W, err.Error())
+	}
 
 	histlim := int(liner.HistoryLimit)
-	v, _ = Resolve(strconv.Itoa(histlim))
+	err = PushValue_Helper(false, PreDefSV, "histsize", strconv.Itoa(histlim))
+	if err != nil {
+		io.WriteString(W, err.Error())
+	}
 
-	PreDefSV["histsize"].Push(v)
-
-	v, _ = Resolve("nil")
-	PreDefSV["querycreds"].Push(v)
-
-	v, _ = Resolve("0")
-	PreDefSV["limit"].Push(v)
-	*/
+	err = PushValue_Helper(false, PreDefSV, "limit", "0")
+	if err != nil {
+		io.WriteString(W, err.Error())
+	}
 }
 
 /* The Resolve method is used to evaluate the input parameter
@@ -92,7 +88,6 @@ func Resolve(param string) (val value.Value, err error) {
 	   appropriately to check which stacks top value needs to be
 	   returned.
 	*/
-	//fmt.Println("Res inp ", param)
 	param = strings.TrimSpace(param)
 
 	if strings.HasPrefix(param, "\\\\") {
@@ -103,12 +98,9 @@ func Resolve(param string) (val value.Value, err error) {
 			err = errors.New("Command for " + key + " does not exist. Please use \\ALIAS to create a command alias.\n")
 		} else {
 
-			//st_val = "\"" + st_val + "\""
-			//fmt.Println("DEBUG Resolve : ", st_val, reflect.TypeOf(st_val))
-
+			//Quote input properly so that resolve returns string and not binary.
+			st_val = "\"" + st_val + "\""
 			val, err = StrToVal(st_val)
-
-			//fmt.Println("DEBUG Resolve : ", st_val, val.Type())
 		}
 
 	} else if strings.HasPrefix(param, "-$") {
@@ -133,7 +125,6 @@ func Resolve(param string) (val value.Value, err error) {
 		} else {
 			val, err = v.Top()
 		}
-		//fmt.Println("Res inp ", val)
 
 	} else if strings.HasPrefix(param, "$") {
 		key := param[1:]
@@ -160,10 +151,9 @@ func Resolve(param string) (val value.Value, err error) {
 		} else {
 			if !strings.HasPrefix(param, "\"") {
 				param = "\"" + param + "\""
-				//fmt.Println("Came in here")
 			}
 			val, err = StrToVal(param)
-			//fmt.Println("Test", param, val.Type())
+
 		}
 	}
 	return
@@ -173,130 +163,32 @@ func Resolve(param string) (val value.Value, err error) {
    value.Value type.
 */
 func StrToVal(param string) (val value.Value, err error) {
-	//fmt.Println("Isha :: " + param)
+
+	//IshaFix : Isha use Newvaluefrom bytes after query code change exposes it.
+
 	param = strings.TrimSpace(param)
 	bytes := []byte(param)
 
-	switch bytes[0] {
-
-	case '{':
-		var p map[string]interface{}
-		err = json.Unmarshal(bytes, &p)
-		if err != nil {
-			return value.ZERO_VALUE, err
-		}
-		val = value.NewValue(p)
-
-	case '[':
-		//type sliceValue []interface{}
-		var p []interface{}
-		err = json.Unmarshal(bytes, &p)
-		if err != nil {
-			return value.ZERO_VALUE, err
-		}
-		val = value.NewValue(p)
-
-		//For strings, number, boolean, null and binary
-	default:
-
-		val = value.NewValue(bytes)
-		err = nil
-	}
-
+	val = value.NewValue(bytes)
+	err = nil
 	return
 
 }
-
-/*func B2S(bs []uint8) string {
-	b := make([]byte, len(bs))
-	for i, v := range bs {
-		if v < 0 {
-			b[i] = byte(256 + int(v))
-		} else {
-			b[i] = byte(v)
-		}
-	}
-	return string(b)
-}*/
 
 /* The ValToStr method converts the input value into a
    string type.
 */
 func ValToStr(item value.Value) (param string, err error) {
-	//fmt.Println(item.Type())
 
-	//bytes, err := json.MarshalIndent(item, "    ", "    ")
-
-	//if item.Type() == value.BINARY {
-
-	//	param = B2S(item.Actual().([]uint8))
-	//	err = nil
-	//} else {
+	//IshaFix : Call String() method in value.Value once it is added
 	bytes, err := item.MarshalJSON()
 	if err != nil {
 		param = ""
 	}
 	param = string(bytes)
 	err = nil
-	//}
 
 	return
-}
-
-/* Stack methods to be used for session parameters */
-type Stack []value.Value
-
-/* Push input value val onto the stack */
-func (stack *Stack) Push(val value.Value) {
-	*stack = append(*stack, val)
-}
-
-/* Return the top element in the stack. If the stack
-   is empty then return ZERO_VALUE.
-*/
-func (stack *Stack) Top() (val value.Value, err error) {
-	if stack.Len() == 0 {
-		val = nil
-		err = errors.New("Stack is Empty")
-	} else {
-		x := stack.Len() - 1
-		val = (*stack)[x]
-		err = nil
-	}
-
-	return
-}
-
-func (stack *Stack) SetTop(v value.Value) (err error) {
-	if stack.Len() == 0 {
-		fmt.Println(errors.New("Stack is Empty. Please use \\PUSH"))
-	} else {
-		x := stack.Len() - 1
-		(*stack)[x] = v
-		err = nil
-	}
-	return
-}
-
-/* Delete the top element in the stack. If the stack
-   is empty then print err stack empty
-*/
-func (stack *Stack) Pop() (val value.Value, err error) {
-	if stack.Len() == 0 {
-		val = nil
-		err = errors.New("Stack is Empty. Cannot Pop()")
-	} else {
-		x := stack.Len() - 1
-		val = (*stack)[x]
-		*stack = (*stack)[:x]
-		err = nil
-	}
-
-	return
-}
-
-func (stack *Stack) Len() int {
-	return len(*stack)
 }
 
 /* Helper function to push or set a value in a stack. */
@@ -308,6 +200,7 @@ func PushValue_Helper(set bool, param map[string]*Stack, vble, value string) (er
 	if err != nil {
 		return err
 	} else {
+		//Stack already exists
 		if ok {
 			//fmt.Println("Returned val from Resolve   ", v)
 			if set == true {
@@ -336,14 +229,7 @@ func PopValue_Helper(unset bool, param map[string]*Stack, vble string) (err erro
 
 	st_Val, ok := param[vble]
 
-	if unset == false {
-		//To pop a value from the input stack
-		if ok {
-			_, err = st_Val.Pop()
-		} else {
-			err = errors.New("Parameter does not exist")
-		}
-	} else {
+	if unset == true {
 		// Unset the enire stack for given parameter
 		if ok {
 			for st_Val.Len() > 0 {
@@ -355,18 +241,25 @@ func PopValue_Helper(unset bool, param map[string]*Stack, vble string) (err erro
 		} else {
 			err = errors.New("Parameter does not exist")
 		}
+	} else {
+		//To pop a value from the input stack
+		if ok {
+			_, err = st_Val.Pop()
+		} else {
+			err = errors.New("Parameter does not exist")
+		}
 	}
 	return
 
 }
 
-func ToCreds(credsFlag string) (MyCred, error) {
+func ToCreds(credsFlag string) (Credentials, error) {
 
 	//Handle the input string of credentials.
 	//The string needs to be parsed into a byte array so as to pass to go_n1ql.
 	cred := strings.Split(credsFlag, ",")
-	var creds MyCred
-	creds = append(creds, Credentials{"user": "", "pass": ""})
+	var creds Credentials
+	creds = append(creds, Credential{"user": "", "pass": ""})
 
 	/* Append input credentials in [{"user": <username>, "pass" : <password>}]
 	format as expected by go_n1ql creds.
@@ -378,23 +271,23 @@ func ToCreds(credsFlag string) (MyCred, error) {
 			err := errors.New("Username or Password missing in -credentials/-c option. Please check")
 			return nil, err
 		} else {
-			creds = append(creds, Credentials{"user": up[0], "pass": up[1]})
+			creds = append(creds, Credential{"user": up[0], "pass": up[1]})
 		}
 	}
 	return creds, nil
 
 }
 
-func PushOrSet(queryurl []string, pushvalue bool) error {
+func PushOrSet(args []string, pushvalue bool) error {
 	// Check what kind of parameter needs to be set or pushed
 	// depending on the pushvalue boolean value.
 	var err error = nil
-	if strings.HasPrefix(queryurl[0], "-$") {
+	if strings.HasPrefix(args[0], "-$") {
 		// For Named Parameters
-		vble := queryurl[0]
+		vble := args[0]
 		vble = vble[2:]
 
-		err = PushValue_Helper(pushvalue, NamedParam, vble, queryurl[1])
+		err = PushValue_Helper(pushvalue, NamedParam, vble, args[1])
 		if err != nil {
 			return err
 		}
@@ -413,12 +306,12 @@ func PushOrSet(queryurl []string, pushvalue bool) error {
 		vble = "$" + vble
 		go_n1ql.SetQueryParams(vble, val)
 
-	} else if strings.HasPrefix(queryurl[0], "-") {
+	} else if strings.HasPrefix(args[0], "-") {
 		// For query parameters
-		vble := queryurl[0]
+		vble := args[0]
 		vble = vble[1:]
 
-		err = PushValue_Helper(pushvalue, QueryParam, vble, queryurl[1])
+		err = PushValue_Helper(pushvalue, QueryParam, vble, args[1])
 		if err != nil {
 			return err
 		}
@@ -427,9 +320,9 @@ func PushOrSet(queryurl []string, pushvalue bool) error {
 			// Define credentials as user/pass and convert into
 			//   JSON object credentials
 
-			var creds MyCred
+			var creds Credentials
 
-			creds_ret, err := ToCreds(queryurl[1])
+			creds_ret, err := ToCreds(args[1])
 			if err != nil {
 				return err
 			}
@@ -460,24 +353,89 @@ func PushOrSet(queryurl []string, pushvalue bool) error {
 			go_n1ql.SetQueryParams(vble, val)
 		}
 
-	} else if strings.HasPrefix(queryurl[0], "$") {
+	} else if strings.HasPrefix(args[0], "$") {
 		// For User defined session variables
-		vble := queryurl[0]
+		vble := args[0]
 		vble = vble[1:]
 
-		err = PushValue_Helper(pushvalue, UserDefSV, vble, queryurl[1])
+		err = PushValue_Helper(pushvalue, UserDefSV, vble, args[1])
 		if err != nil {
 			return err
 		}
 
 	} else {
 		// For Predefined session variables
-		vble := queryurl[0]
+		vble := args[0]
 
-		err = PushValue_Helper(pushvalue, PreDefSV, vble, queryurl[1])
+		err = PushValue_Helper(pushvalue, PreDefSV, vble, args[1])
 		if err != nil {
 			return err
 		}
 	}
 	return err
+}
+
+func printDesc(cmdname string) {
+	switch cmdname {
+	case "ALIAS":
+		io.WriteString(W, "Create an alias for input. <command> = <shell command> or <query statement>\n")
+		io.WriteString(W, "\tExample : \n\t        \\ALIAS serverversion \"select version(), min_version()\" ;\n\t        \\ALIAS \"\\SET -max-parallelism 8\";\n")
+
+	case "CONNECT":
+		io.WriteString(W, "Connect to the query service or cluster endpoint url.")
+		io.WriteString(W, "Default : http://localhost:8091")
+		io.WriteString(W, "\tExample : \n\t        \\CONNECT http://172.6.23.2:8091 ; \n\t         \\CONNECT https://my.secure.node.com:8093 ;")
+
+	case "COPYRIGHT":
+		io.WriteString(W, "Print Couchbase Copyright information")
+		io.WriteString(W, "\tExample : \n\t        \\COPYRIGHT;")
+
+	case "DISCONNECT":
+		io.WriteString(W, "Disconnect from the query service or cluster endpoint url.")
+		io.WriteString(W, "\tExample : \n\t        \\DISCONNECT;")
+
+	case "ECHO":
+		io.WriteString(W, "Echo the value of the input. <arg> = <prefix><name> (a parameter) or \n <arg> = <alias> (command alias) or \n <arg> = <input> (any input statement) ")
+		io.WriteString(W, "\tExample : \n\t        \\ECHO -$r ;\n\t        \\ECHO \\Com; ")
+
+	case "EXIT":
+		io.WriteString(W, "Exit the shell")
+		io.WriteString(W, "\tExample : \n\t        \\EXIT; \n\t        \\QUIT;")
+
+	case "HELP":
+		io.WriteString(W, "The input arguments are shell commands. If a * is input then the command displays HELP information for all input shell commands.")
+		io.WriteString(W, "\tExample : \n\t        \\HELP VERSION; \n\t        \\HELP EXIT DISCONNECT VERSION; \n\t        \\HELP;")
+
+	case "POP":
+		io.WriteString(W, "Pop the value of the given parameter from the input parameter stack. <parameter> = <prefix><name>")
+		io.WriteString(W, "\tExample : \n\t        \\Pop -$r ;\n\t        \\Pop $Val ; \n\t        \\Pop ;")
+
+	case "PUSH":
+		io.WriteString(W, "Push the value of the given parameter to the input parameter stack. <parameter> = <prefix><name>")
+		io.WriteString(W, "\tExample : \n\t        \\PUSH -$r 9.5 ;\n\t        \\PUSH $Val -$r; \n\t        \\PUSH ;")
+
+	case "SET":
+		io.WriteString(W, "Set the value of the given parameter to the input value. <parameter> = <prefix><name>")
+		io.WriteString(W, "\tExample : \n\t        \\SET -$r 9.5 ;\n\t        \\SET $Val -$r ;")
+
+	case "SOURCE":
+		io.WriteString(W, "Load input file into shell")
+		io.WriteString(W, " For Example : \n\t \\SOURCE temp1.txt ;")
+
+	case "UNALIAS":
+		io.WriteString(W, "Delete the alias given by <alias name>.")
+		io.WriteString(W, "\tExample : \n\t        \\UNALIAS serverversion;\n\t        \\UNALIAS subcommand1 subcommand2 serverversion;")
+
+	case "UNSET":
+		io.WriteString(W, "Unset the value of the given parameter. <parameter> = <prefix><name> ")
+		io.WriteString(W, "\tExample : \n\t        \\Unset -$r ;\n\t        \\Unset $Val ;")
+
+	case "VERSION":
+		io.WriteString(W, "Print the Shell Version")
+		io.WriteString(W, "\tExample : \n\t        \\VERSION;")
+
+	default:
+		io.WriteString(W, "IshaFix : Does not exist")
+
+	}
 }

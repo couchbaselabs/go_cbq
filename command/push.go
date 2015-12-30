@@ -11,7 +11,7 @@ package command
 
 import (
 	"errors"
-	"fmt"
+	"io"
 )
 
 /* Push Command */
@@ -35,7 +35,7 @@ func (this *Push) MaxArgs() int {
 	return 2
 }
 
-func (this *Push) ParseCommand(queryurl []string) error {
+func (this *Push) ExecCommand(args []string) error {
 	/* Command to set the value of the given parameter to
 	   the input value. The top value of the parameter stack
 	   is modified. If the command contains no input argument
@@ -43,11 +43,13 @@ func (this *Push) ParseCommand(queryurl []string) error {
 	*/
 	var err error = nil
 
-	if len(queryurl) > this.MaxArgs() {
+	if len(args) > this.MaxArgs() {
 		return errors.New("Too many arguments")
-	} else if len(queryurl) == 1 {
+
+	} else if len(args) == 1 {
 		return errors.New("Too few arguments")
-	} else if len(queryurl) == 0 {
+
+	} else if len(args) == 0 {
 		/* For \PUSH with no input arguments, push the top value
 		on the stack for every variable.
 		*/
@@ -78,8 +80,7 @@ func (this *Push) ParseCommand(queryurl []string) error {
 
 	} else {
 		//Check what kind of parameter needs to be pushed.
-
-		err = PushOrSet(queryurl, false)
+		err = PushOrSet(args, false)
 		if err != nil {
 			return err
 		}
@@ -88,10 +89,9 @@ func (this *Push) ParseCommand(queryurl []string) error {
 }
 
 func (this *Push) PrintHelp() {
-	fmt.Println("\\PUSH [<parameter> <value>]")
-	fmt.Println("Push the value of the given parameter to the input parameter stack. <parameter> = <prefix><name>")
-	fmt.Println("\tExample : \n\t        \\PUSH -$r 9.5 ;\n\t        \\PUSH $Val -$r; \n\t        \\PUSH ;")
-	fmt.Println()
+	io.WriteString(W, "\\PUSH <parameter> <value>")
+	printDesc(this.Name())
+	io.WriteString(W, "\n")
 }
 
 /* Push value from the Top of the stack onto the parameter stack.

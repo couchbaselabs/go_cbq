@@ -11,8 +11,7 @@ package command
 
 import (
 	"errors"
-	"fmt"
-	"math"
+	"io"
 	"strings"
 )
 
@@ -34,14 +33,14 @@ func (this *Help) MinArgs() int {
 }
 
 func (this *Help) MaxArgs() int {
-	return math.MaxInt16
+	return MAX_ARGS
 }
 
-func (this *Help) ParseCommand(v []string) error {
+func (this *Help) ExecCommand(args []string) error {
 	/* Input Command : \HELP;
 	   Print Help information for all commands. */
-	if len(v) == 0 {
-		fmt.Println("Help Information for all Shell Commands")
+	if len(args) == 0 {
+		io.WriteString(W, "Help Information for all Shell Commands")
 		for _, val := range COMMAND_LIST {
 			val.PrintHelp()
 		}
@@ -50,16 +49,16 @@ func (this *Help) ParseCommand(v []string) error {
 		   Print help information for input shell commands. The commands
 		   need not contain the \ prefix. Return an error if the Command
 		   doesnt exist. */
-		for _, val := range v {
+		for _, val := range args {
 			if strings.HasPrefix(val, "\\") == false {
 				val = "\\" + val
 			}
-			Cmd, ok := COMMAND_LIST[val]
+			cmd, ok := COMMAND_LIST[val]
 			if ok == true {
-				Cmd.PrintHelp()
+				cmd.PrintHelp()
 			} else {
-				fmt.Println("Command doesnt exist. Use \\HELP; to list help for all shell commands.")
-				return errors.New("Command doesnt exist")
+				io.WriteString(W, "Command does not exist. Use \\HELP; to list help for all shell commands.")
+				return errors.New("Command does not exist")
 			}
 		}
 
@@ -68,8 +67,7 @@ func (this *Help) ParseCommand(v []string) error {
 }
 
 func (this *Help) PrintHelp() {
-	fmt.Println("\\HELP [<args>]")
-	fmt.Println("The input arguments are shell commands. If a * is input then the command displays HELP information for all input shell commands.")
-	fmt.Println("\tExample : \n\t        \\HELP VERSION; \n\t        \\HELP EXIT DISCONNECT VERSION; \n\t        \\HELP;")
-	fmt.Println()
+	io.WriteString(W, "\\HELP <args>...")
+	printDesc(this.Name())
+	io.WriteString(W, "\n")
 }

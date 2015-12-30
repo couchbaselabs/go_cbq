@@ -12,6 +12,7 @@ package command
 import (
 	"errors"
 	"fmt"
+	"io"
 )
 
 /* Version Command */
@@ -35,11 +36,11 @@ func (this *Version) MaxArgs() int {
 	return 0
 }
 
-func (this *Version) ParseCommand(queryurl []string) error {
+func (this *Version) ExecCommand(args []string) error {
 	/* Print the shell version. If the command contains an input
 	   argument then throw an error.
 	*/
-	if len(queryurl) != 0 {
+	if len(args) != 0 {
 		return errors.New("Too many arguments")
 	} else {
 		fmt.Println("SHELL VERSION : " + SHELL_VERSION)
@@ -49,8 +50,7 @@ func (this *Version) ParseCommand(queryurl []string) error {
 }
 
 func (this *Version) PrintHelp() {
-	fmt.Println("\\VERSION")
-	fmt.Println("Print the Shell Version")
-	fmt.Println("\tExample : \n\t        \\VERSION;")
-	fmt.Println()
+	io.WriteString(W, "\\VERSION")
+	printDesc(this.Name())
+	io.WriteString(W, "\n")
 }

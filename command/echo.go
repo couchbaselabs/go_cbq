@@ -13,8 +13,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"math"
-	//"strings"
 
 	"github.com/couchbase/query/value"
 )
@@ -37,32 +35,36 @@ func (this *Echo) MinArgs() int {
 }
 
 func (this *Echo) MaxArgs() int {
-	return math.MaxInt64
+	return MAX_ARGS
 }
 
-func (this *Echo) ParseCommand(queryurl []string) error {
+func (this *Echo) ExecCommand(args []string) error {
 
-	if len(queryurl) > this.MaxArgs() {
-
+	if len(args) > this.MaxArgs() {
 		return errors.New("Too many arguments")
-	} else if len(queryurl) < this.MinArgs() {
 
+	} else if len(args) < this.MinArgs() {
 		return errors.New("Too few arguments")
+
 	} else {
 
-		for _, val := range queryurl {
+		// Range over the input arguments to echo.
+		for _, val := range args {
 
+			// Resolve each value to return a value.Value.
 			v, err := Resolve(val)
 			if err != nil {
 				return err
 			}
 
+			// If the value type is string then output it directly.
 			if v.Type() == value.STRING {
 
 				io.WriteString(W, fmt.Sprintf("%s", v))
 				io.WriteString(W, " ")
 
 			} else {
+				// Convert non string values to string and then output.
 
 				tmp, err := ValToStr(v)
 
@@ -81,8 +83,7 @@ func (this *Echo) ParseCommand(queryurl []string) error {
 }
 
 func (this *Echo) PrintHelp() {
-	fmt.Println("\\ECHO <arg>")
-	fmt.Println("Echo the value of the input. <arg> = <prefix><name> (a parameter) or \n <arg> = <alias> (command alias) or \n <arg> = <input> (any input statement) ")
-	fmt.Println("\tExample : \n\t        \\ECHO -$r ;\n\t        \\ECHO \\Com; ")
-	fmt.Println()
+	io.WriteString(W, "\\ECHO <arg>...")
+	printDesc(this.Name())
+	io.WriteString(W, "\n")
 }

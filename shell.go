@@ -15,6 +15,7 @@ import (
 	"flag"
 	"fmt"
 	"golang.org/x/crypto/ssh/terminal"
+	"io"
 	"os"
 	"path/filepath"
 
@@ -32,15 +33,15 @@ import (
    Default value : http://localhost:8091/
    Point to the cluser/query endpoint to connect to.
 */
-var TiServer string
+var ServerFlag string
 
 func init() {
 	const (
 		defaultserver = "http://localhost:8091/"
 		usage         = "URL to the query service/cluster. \n\t\t Default : http://localhost:8091\n\n Usage: cbq \n\t\t Connects to local couchbase instance. Same as: cbq -engine=http://localhost:8091\n\t cbq -engine=http://172.23.107.18:8093 \n\t\t Connects to query node at 172.23.107.18 Port 8093 \n\t cbq -engine=https://my.secure.node.com:8093 \n\t\t Connects to query node at my.secure.node.com:8093 using secure https protocol."
 	)
-	flag.StringVar(&TiServer, "engine", defaultserver, usage)
-	flag.StringVar(&TiServer, "e", defaultserver, "Shorthand for -engine")
+	flag.StringVar(&ServerFlag, "engine", defaultserver, usage)
+	flag.StringVar(&ServerFlag, "e", defaultserver, "Shorthand for -engine")
 }
 
 /*
@@ -229,22 +230,25 @@ func init() {
 */
 
 var (
-	QUERYURL   string
-	DISCONNECT bool
-	EXIT       bool
+	SERVICE_URL string
+	DISCONNECT  bool
+	EXIT        bool
 )
 
 func main() {
 
 	flag.Parse()
+	command.W = os.Stdout
 
 	if scriptFlag != "" {
-		err := execute_query(scriptFlag, os.Stdout)
+		err := execute_input(scriptFlag, os.Stdout)
 		if err != nil {
-			s_err := handleError(err, TiServer)
-			fmt.Println(fgRed, "ERROR", s_err.Code(), ":", s_err, reset)
+			s_err := handleError(err, ServerFlag)
+			s := fmt.Sprintln(fgRed, "ERROR", s_err.Code(), ":", s_err, reset)
+			io.WriteString(command.W, s)
+			os.Exit(1)
 		}
-		os.Exit(1)
+		os.Exit(0)
 	}
 
 	/* Handle options and what they should do */
@@ -253,28 +257,29 @@ func main() {
 	//Taken out so as to connect to both cluster and query service
 	//using go_n1ql.
 	/*
-		if strings.HasPrefix(TiServer, "http://") == false {
-			TiServer = "http://" + TiServer
+		if strings.HasPrefix(ServerFlag, "http://") == false {
+			ServerFlag = "http://" + ServerFlag
 		}
 
 		urlRegex := "^(https?://)[-a-zA-Z0-9+&@#/%?=~_|!:,.;]*[-a-zA-Z0-9+&@#/%=~_|]"
-		match, _ := regexp.MatchString(urlRegex, TiServer)
+		match, _ := regexp.MatchString(urlRegex, ServerFlag)
 		if match == false {
 			//TODO Isha : Add error code. Throw invalid url error
-			fmt.Println("Invalid url please check" + TiServer)
+			fmt.Println("Invalid url please check" + ServerFlag)
 		}
 
 
 		//-engine
-		if strings.HasSuffix(TiServer, "/") == false {
-			TiServer = TiServer + "/"
+		if strings.HasSuffix(ServerFlag, "/") == false {
+			ServerFlag = ServerFlag + "/"
 		}
 	*/
 
 	/* -quiet : Display Message only if flag not specified
 	 */
 	if !*quietFlag {
-		fmt.Printf("Couchbase query shell connected to %v . Type Ctrl-D to exit.\n", TiServer)
+		s := fmt.Sprintln("Connect to " + ServerFlag + ". Type Ctrl-D to exit.\n")
+		io.WriteString(command.W, s)
 	}
 
 	/* -version : Display the version of the shell and then exit.
@@ -282,7 +287,7 @@ func main() {
 	if versionFlag == true {
 		dummy := []string{}
 		cmd := command.Version{}
-		_ = cmd.ParseCommand(dummy)
+		_ = cmd.ExecCommand(dummy)
 		os.Exit(0)
 	}
 
@@ -290,22 +295,26 @@ func main() {
 	   the n1ql_creds. Append to creds so that user can also define
 	   bucket credentials using -credentials if they need to.
 	*/
-	var creds command.MyCred
+	var creds command.Credentials
 
 	if userFlag != "" {
-		fmt.Println("Enter Password: ")
+		s := fmt.Sprintln("Enter Password: ")
+		io.WriteString(command.W, s)
+
 		password, err := terminal.ReadPassword(0)
 		if err == nil {
 			if string(password) == "" {
-				s_err := handleError(errors.New("Endered empty password string."), TiServer)
-				fmt.Println(fgRed, "ERROR", s_err.Code(), ":", s_err, reset)
+				s_err := handleError(errors.New("Empty password string."), ServerFlag)
+				s := fmt.Sprintln(fgRed, "ERROR", s_err.Code(), ":", s_err, reset)
+				io.WriteString(command.W, s)
 				os.Exit(1)
 			} else {
-				creds = append(creds, command.Credentials{"user": userFlag, "pass": string(password)})
+				creds = append(creds, command.Credential{"user": userFlag, "pass": string(password)})
 			}
 		} else {
-			s_err := handleError(err, TiServer)
-			fmt.Println(fgRed, "ERROR", s_err.Code(), ":", s_err, reset)
+			s_err := handleError(err, ServerFlag)
+			s := fmt.Sprintln(fgRed, "ERROR", s_err.Code(), ":", s_err, reset)
+			io.WriteString(command.W, s)
 			os.Exit(1)
 		}
 	}
@@ -319,14 +328,15 @@ func main() {
 		/* No credentials exist. This can still be used to connect to
 		   un-authenticated servers.
 		*/
-		fmt.Println("No Input Credentials. In order to connect to a server with authentication, please provide credentials.")
+		io.WriteString(command.W, "No Input Credentials. In order to connect to a server with authentication, please provide credentials.")
 
 	} else if credsFlag != "" {
 
 		creds_ret, err := command.ToCreds(credsFlag)
 		if err != nil {
-			s_err := handleError(err, TiServer)
-			fmt.Println(fgRed, "ERROR", s_err.Code(), ":", s_err, reset)
+			s_err := handleError(err, ServerFlag)
+			s := fmt.Sprintln(fgRed, "ERROR", s_err.Code(), ":", s_err, reset)
+			io.WriteString(command.W, s)
 		}
 		for _, v := range creds_ret {
 			creds = append(creds, v)
@@ -336,9 +346,10 @@ func main() {
 	//Append empty credentials. This is used for cases where one of the buckets
 	//is a SASL bucket, and we need to access the other unprotected buckets.
 	//CBauth works this way.
-	if credsFlag == "" && userFlag != "" {
-		creds = append(creds, command.Credentials{"user": "", "pass": ""})
-	}
+
+	//if credsFlag == "" && userFlag != "" {
+	creds = append(creds, command.Credential{"user": "", "pass": ""})
+	//}
 
 	/* Add the credentials set by -user and -credentials to the
 	   go_n1ql creds parameter.
@@ -347,8 +358,9 @@ func main() {
 		ac, err := json.Marshal(creds)
 		if err != nil {
 			//Error while Marshalling
-			s_err := handleError(err, TiServer)
-			fmt.Println(fgRed, "ERROR", s_err.Code(), ":", s_err, reset)
+			s_err := handleError(err, ServerFlag)
+			s := fmt.Sprintln(fgRed, "ERROR", s_err.Code(), ":", s_err, reset)
+			io.WriteString(command.W, s)
 			os.Exit(1)
 		}
 		go_n1ql.SetQueryParams("creds", string(ac))

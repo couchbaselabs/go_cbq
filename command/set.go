@@ -11,7 +11,7 @@ package command
 
 import (
 	"errors"
-	"fmt"
+	"io"
 )
 
 /* Set Command */
@@ -35,7 +35,7 @@ func (this *Set) MaxArgs() int {
 	return 2
 }
 
-func (this *Set) ParseCommand(queryurl []string) error {
+func (this *Set) ExecCommand(args []string) error {
 	/* Command to set the value of the given parameter to
 	   the input value. The top value of the parameter stack
 	   is modified. If the command contains no input argument
@@ -43,13 +43,13 @@ func (this *Set) ParseCommand(queryurl []string) error {
 	*/
 	var err error
 
-	if len(queryurl) > this.MaxArgs() {
+	if len(args) > this.MaxArgs() {
 		return errors.New("Too many arguments")
-	} else if len(queryurl) < this.MinArgs() {
+	} else if len(args) < this.MinArgs() {
 		return errors.New("Too few arguments")
 	} else {
 		//Check what kind of parameter needs to be set.
-		err = PushOrSet(queryurl, true)
+		err = PushOrSet(args, true)
 		if err != nil {
 			return err
 		}
@@ -58,8 +58,7 @@ func (this *Set) ParseCommand(queryurl []string) error {
 }
 
 func (this *Set) PrintHelp() {
-	fmt.Println("\\SET <parameter> <value>")
-	fmt.Println("Set the value of the given parameter to the input value. <parameter> = <prefix><name>")
-	fmt.Println("\tExample : \n\t        \\SET -$r 9.5 ;\n\t        \\SET $Val -$r ;")
-	fmt.Println()
+	io.WriteString(W, "\\SET <parameter> <value>")
+	printDesc(this.Name())
+	io.WriteString(W, "\n")
 }

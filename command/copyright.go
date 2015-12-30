@@ -11,7 +11,7 @@ package command
 
 import (
 	"errors"
-	"fmt"
+	"io"
 )
 
 /* Copyright Command */
@@ -35,21 +35,20 @@ func (this *Copyright) MaxArgs() int {
 	return 0
 }
 
-func (this *Copyright) ParseCommand(queryurl []string) error {
+func (this *Copyright) ExecCommand(args []string) error {
 	/* Print the Copyright information for the shell. If the
 	   command contains an input argument then throw an error.
 	*/
-	if len(queryurl) != 0 {
+	if len(args) != 0 {
 		return errors.New("Too many arguments")
 	} else {
-		fmt.Println("Copyright (c) 2013 Couchbase, Inc. Licensed under the Apache License, Version 2.0 (the \"License\"); \nyou may not use this file except in compliance with the License. You may obtain a copy of the \nLicense at http://www.apache.org/licenses/LICENSE-2.0\nUnless required by applicable law or agreed to in writing, software distributed under the\nLicense is distributed on an \"AS IS\" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,\neither express or implied. See the License for the specific language governing permissions\nand limitations under the License.")
+		io.WriteString(W, "Copyright (c) 2015 Couchbase, Inc. Licensed under the Apache License, Version 2.0 (the \"License\"); \nyou may not use this file except in compliance with the License. You may obtain a copy of the \nLicense at http://www.apache.org/licenses/LICENSE-2.0\nUnless required by applicable law or agreed to in writing, software distributed under the\nLicense is distributed on an \"AS IS\" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,\neither express or implied. See the License for the specific language governing permissions\nand limitations under the License.")
 	}
 	return nil
 }
 
 func (this *Copyright) PrintHelp() {
-	fmt.Println("\\COPYRIGHT")
-	fmt.Println("Print Couchbase Copyright information")
-	fmt.Println("\tExample : \n\t        \\COPYRIGHT;")
-	fmt.Println()
+	io.WriteString(W, "\\COPYRIGHT")
+	printDesc(this.Name())
+	io.WriteString(W, "\n")
 }

@@ -11,7 +11,7 @@ package command
 
 import (
 	"errors"
-	"fmt"
+	"io"
 	"strings"
 )
 
@@ -21,7 +21,7 @@ type Pop struct {
 }
 
 func (this *Pop) Name() string {
-	return "Pop"
+	return "POP"
 }
 
 func (this *Pop) CommandCompletion() bool {
@@ -33,18 +33,20 @@ func (this *Pop) MinArgs() int {
 }
 
 func (this *Pop) MaxArgs() int {
-	return 2
+	return 1
 }
 
-func (this *Pop) ParseCommand(queryurl []string) error {
+func (this *Pop) ExecCommand(args []string) error {
 
 	var err error
 
-	if len(queryurl) > this.MaxArgs() {
+	if len(args) > this.MaxArgs() {
 		return errors.New("Too many arguments")
-	} else if len(queryurl) < this.MinArgs() {
+
+	} else if len(args) < this.MinArgs() {
 		return errors.New("Too few arguments")
-	} else if len(queryurl) == 0 {
+
+	} else if len(args) == 0 {
 		/* For \Pop with no input arguments, Pop the top value
 		on the stack for every variable.
 		*/
@@ -76,9 +78,9 @@ func (this *Pop) ParseCommand(queryurl []string) error {
 	} else {
 		//Check what kind of parameter needs to be popped
 
-		if strings.HasPrefix(queryurl[0], "-$") {
+		if strings.HasPrefix(args[0], "-$") {
 			// For Named Parameters
-			vble := queryurl[0]
+			vble := args[0]
 			vble = vble[2:]
 
 			err = PopValue_Helper(false, NamedParam, vble)
@@ -86,9 +88,9 @@ func (this *Pop) ParseCommand(queryurl []string) error {
 				return err
 			}
 
-		} else if strings.HasPrefix(queryurl[0], "-") {
+		} else if strings.HasPrefix(args[0], "-") {
 			// For query parameters
-			vble := queryurl[0]
+			vble := args[0]
 			vble = vble[1:]
 
 			err = PopValue_Helper(false, QueryParam, vble)
@@ -96,9 +98,9 @@ func (this *Pop) ParseCommand(queryurl []string) error {
 				return err
 			}
 
-		} else if strings.HasPrefix(queryurl[0], "$") {
+		} else if strings.HasPrefix(args[0], "$") {
 			// For User defined session variables
-			vble := queryurl[0]
+			vble := args[0]
 			vble = vble[1:]
 
 			err = PopValue_Helper(false, UserDefSV, vble)
@@ -108,7 +110,7 @@ func (this *Pop) ParseCommand(queryurl []string) error {
 
 		} else {
 			// For Predefined session variables
-			vble := queryurl[0]
+			vble := args[0]
 
 			err = PopValue_Helper(false, PreDefSV, vble)
 			if err != nil {
@@ -120,10 +122,9 @@ func (this *Pop) ParseCommand(queryurl []string) error {
 }
 
 func (this *Pop) PrintHelp() {
-	fmt.Println("\\POP [<parameter>]")
-	fmt.Println("Pop the value of the given parameter from the input parameter stack. <parameter> = <prefix><name>")
-	fmt.Println("\tExample : \n\t        \\Pop -$r ;\n\t        \\Pop $Val ; \n\t        \\Pop ;")
-	fmt.Println()
+	io.WriteString(W, "\\POP [<parameter>]")
+	printDesc(this.Name())
+	io.WriteString(W, "\n")
 }
 
 /* Push value from the Top of the stack onto the parameter stack.

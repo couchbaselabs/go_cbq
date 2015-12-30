@@ -13,7 +13,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"math"
 	"strings"
 )
 
@@ -23,7 +22,7 @@ type Alias struct {
 }
 
 func (this *Alias) Name() string {
-	return "Alias"
+	return "ALIAS"
 }
 
 func (this *Alias) CommandCompletion() bool {
@@ -35,19 +34,20 @@ func (this *Alias) MinArgs() int {
 }
 
 func (this *Alias) MaxArgs() int {
-	return math.MaxInt64
+	return MAX_ALIASES
 }
 
-func (this *Alias) ParseCommand(queryurl []string) error {
+func (this *Alias) ExecCommand(args []string) error {
 
-	if len(queryurl) > this.MaxArgs() {
+	if len(args) > this.MaxArgs() {
+		return errors.New("Too many arguments.")
 
-		return errors.New("Too many arguments. Quote second input argument")
-	} else if len(queryurl) < this.MinArgs() {
-		if len(queryurl) == 0 {
+	} else if len(args) < this.MinArgs() {
+
+		if len(args) == 0 {
 			// \ALIAS without input args lists the aliases present.
 			if len(AliasCommand) == 0 {
-				io.WriteString(W, "There are no defined command aliases. Use \\ALIAS <name> <value> to define.\n")
+				io.WriteString(W, "There are no defined command aliases. Use \\ALIAS <name> <value> to define an alias.\n")
 			}
 
 			for k, v := range AliasCommand {
@@ -57,19 +57,21 @@ func (this *Alias) ParseCommand(queryurl []string) error {
 			}
 
 		} else {
+			// Error out if it has 1 argument.
 			return errors.New("Too few arguments")
 		}
 
 	} else {
-		value := strings.Join(queryurl[1:], " ")
+		// Concatenate the elements of args with separator " "
+		// to give the input value
+		value := strings.Join(args[1:], " ")
 
 		//Add this to the map for Aliases
-		key := queryurl[0]
-		_, ok := AliasCommand[key]
-		if !ok {
+		key := args[0]
+
+		//Aliases can be replaced.
+		if key != "" {
 			AliasCommand[key] = value
-		} else {
-			return errors.New("Alias " + key + " already exists.\n")
 		}
 
 	}
@@ -78,8 +80,7 @@ func (this *Alias) ParseCommand(queryurl []string) error {
 }
 
 func (this *Alias) PrintHelp() {
-	fmt.Println("\\ALIAS <command name> <command>")
-	fmt.Println("Create a command alias for a shell command or query. <command> = <shell command> or <query statement>")
-	fmt.Println("\tExample : \n\t        \\ALIAS serverversion \"select version(), min_version()\" ;\n\t        \\ALIAS \"\\SET -max-parallelism 8\";")
-	fmt.Println()
+	io.WriteString(W, "\\ALIAS <command name> <command>\n")
+	printDesc(this.Name())
+	io.WriteString(W, "\n")
 }

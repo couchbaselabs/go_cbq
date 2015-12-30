@@ -11,7 +11,7 @@ package command
 
 import (
 	"errors"
-	"fmt"
+	"io"
 	"strings"
 )
 
@@ -36,21 +36,23 @@ func (this *Unset) MaxArgs() int {
 	return 1
 }
 
-func (this *Unset) ParseCommand(queryurl []string) error {
+func (this *Unset) ExecCommand(args []string) error {
 	/* Command to Unset the value of the given parameter.
 	 */
 	var err error
 
-	if len(queryurl) > this.MaxArgs() {
+	if len(args) > this.MaxArgs() {
 		return errors.New("Too many arguments")
-	} else if len(queryurl) < this.MinArgs() {
+
+	} else if len(args) < this.MinArgs() {
 		return errors.New("Too few arguments")
+
 	} else {
 		//Check what kind of parameter needs to be Unset.
 		// For query parameters
-		if strings.HasPrefix(queryurl[0], "-$") {
+		if strings.HasPrefix(args[0], "-$") {
 			// For Named Parameters
-			vble := queryurl[0]
+			vble := args[0]
 			vble = vble[2:]
 
 			err = PopValue_Helper(true, NamedParam, vble)
@@ -58,9 +60,9 @@ func (this *Unset) ParseCommand(queryurl []string) error {
 				return err
 			}
 
-		} else if strings.HasPrefix(queryurl[0], "-") {
+		} else if strings.HasPrefix(args[0], "-") {
 			// For query parameters
-			vble := queryurl[0]
+			vble := args[0]
 			vble = vble[1:]
 
 			err = PopValue_Helper(true, QueryParam, vble)
@@ -68,9 +70,9 @@ func (this *Unset) ParseCommand(queryurl []string) error {
 				return err
 			}
 
-		} else if strings.HasPrefix(queryurl[0], "$") {
+		} else if strings.HasPrefix(args[0], "$") {
 			// For User defined session variables
-			vble := queryurl[0]
+			vble := args[0]
 			vble = vble[1:]
 
 			err = PopValue_Helper(true, UserDefSV, vble)
@@ -80,7 +82,7 @@ func (this *Unset) ParseCommand(queryurl []string) error {
 
 		} else {
 			// For Predefined session variables
-			vble := queryurl[0]
+			vble := args[0]
 
 			err = PopValue_Helper(true, PreDefSV, vble)
 			if err != nil {
@@ -92,8 +94,7 @@ func (this *Unset) ParseCommand(queryurl []string) error {
 }
 
 func (this *Unset) PrintHelp() {
-	fmt.Println("\\UNSET <parameter>")
-	fmt.Println("Unset the value of the given parameter. <parameter> = <prefix><name> ")
-	fmt.Println("\tExample : \n\t        \\Unset -$r ;\n\t        \\Unset $Val ;")
-	fmt.Println()
+	io.WriteString(W, "\\UNSET <parameter>")
+	printDesc(this.Name())
+	io.WriteString(W, "\n")
 }

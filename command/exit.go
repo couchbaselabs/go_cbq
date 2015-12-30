@@ -11,49 +11,48 @@ package command
 
 import (
 	"errors"
-	"fmt"
+	"io"
 )
 
 /* Exit and Quit Commands */
-type ExitorQuit struct {
+type Exit struct {
 	ShellCommand
 }
 
-func (this *ExitorQuit) Name() string {
+func (this *Exit) Name() string {
 	return "EXIT"
 }
 
-func (this *ExitorQuit) CommandCompletion() bool {
+func (this *Exit) CommandCompletion() bool {
 	return false
 }
 
-func (this *ExitorQuit) MinArgs() int {
+func (this *Exit) MinArgs() int {
 	return 0
 }
 
-func (this *ExitorQuit) MaxArgs() int {
+func (this *Exit) MaxArgs() int {
 	return 0
 }
 
-func (this *ExitorQuit) ParseCommand(queryurl []string) error {
+func (this *Exit) ExecCommand(args []string) error {
 	/* Command to Exit the shell. We set the EXIT flag to true.
 	Once this command is processed, and executequery returns to
 	HandleInteractiveMode, handle errors (if any) and then exit
 	with the correct exit status. If the command contains an
 	input argument then throw an error.
 	*/
-	if len(queryurl) != 0 {
+	if len(args) != 0 {
 		return errors.New("Too many arguments")
 	} else {
-		fmt.Println("\n Exiting the shell.")
+		io.WriteString(W, "\n Exiting the shell.")
 		EXIT = true
 	}
 	return nil
 }
 
-func (this *ExitorQuit) PrintHelp() {
-	fmt.Println("\\EXIT; OR QUIT;")
-	fmt.Println("Exit the shell")
-	fmt.Println("\tExample : \n\t        \\EXIT; \n\t        \\QUIT;")
-	fmt.Println()
+func (this *Exit) PrintHelp() {
+	io.WriteString(W, "\\EXIT; OR QUIT;")
+	printDesc(this.Name())
+	io.WriteString(W, "\n")
 }

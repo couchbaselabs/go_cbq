@@ -11,7 +11,7 @@ package command
 
 import (
 	"errors"
-	"fmt"
+	"io"
 )
 
 /* Disconnect Command */
@@ -35,24 +35,24 @@ func (this *Disconnect) MaxArgs() int {
 	return 0
 }
 
-func (this *Disconnect) ParseCommand(queryurl []string) error {
+func (this *Disconnect) ExecCommand(args []string) error {
 	/* Command to disconnect service. Use the NoQueryService
 	   flag value and the disconnect flag value to determine
 	   disconnection. If the command contains an input argument
 	   then throw an error.
 	*/
-	if len(queryurl) != 0 {
+	if len(args) != 0 {
 		return errors.New("Too many arguments")
+
 	} else {
 		DISCONNECT = true
-		fmt.Println("\nCouchbase query shell not connected to any endpoint. Use \\CONNECT command to connect.  ")
+		io.WriteString(W, "\nCouchbase query shell not connected to any endpoint. Use \\CONNECT command to connect.  ")
 	}
 	return nil
 }
 
 func (this *Disconnect) PrintHelp() {
-	fmt.Println("\\DISCONNECT;")
-	fmt.Println("Disconnect from the query service or cluster endpoint url.")
-	fmt.Println("\tExample : \n\t        \\DISCONNECT;")
-	fmt.Println()
+	io.WriteString(W, "\\DISCONNECT;")
+	printDesc(this.Name())
+	io.WriteString(W, "\n")
 }

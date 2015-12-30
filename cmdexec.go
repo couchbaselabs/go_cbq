@@ -22,7 +22,7 @@ import (
 	"github.com/couchbaselabs/go_cbq/command"
 )
 
-func execute_query(line string, w io.Writer) error {
+func execute_input(line string, w io.Writer) error {
 
 	command.W = w
 
@@ -35,6 +35,7 @@ func execute_query(line string, w io.Writer) error {
 	}
 
 	if strings.HasPrefix(line, "\\\\") {
+		// This block handles aliases
 		commandkey := line[2:]
 		commandkey = strings.TrimSpace(commandkey)
 
@@ -44,7 +45,7 @@ func execute_query(line string, w io.Writer) error {
 			return errors.New("Alias " + commandkey + " doesnt exist." + val + "\n")
 		}
 
-		err := execute_query(val, w)
+		err := execute_input(val, w)
 		/* Error handling for Shell errors and errors recieved from
 		   go_n1ql.
 		*/
@@ -53,44 +54,37 @@ func execute_query(line string, w io.Writer) error {
 		}
 
 	} else if strings.HasPrefix(line, "\\") {
-		err := ShellCommandParser(line)
+		//This block handles the shell commands
+		err := ExecShellCmd(line)
 		if err != nil {
 			return err
 		}
 
 	} else {
+		//This block handles N1QL statements
 		// If connected to a query service then NoQueryService == false.
-		if !NoQueryService {
+		if NoQueryService == true {
+			//Not connected to a query service
+			err := errors.New("Not connected to any instance. Use \\CONNECT shell command to connect to an instance.")
+			return err
+		} else {
 			/* Try opening a connection to the endpoint. If successful, ping.
 			   If successful execute the n1ql command. Else try to connect
 			   again.
 			*/
-			n1ql, err := sql.Open("n1ql", TiServer)
+			n1ql, err := sql.Open("n1ql", ServerFlag)
 			if err != nil {
-				fmt.Println(fgRed, "Error in sql Open", reset)
+				tmpstr := fmt.Sprintln(fgRed, "Error in sql Open", reset)
+				io.WriteString(w, tmpstr)
 				return err
 			} else {
 				//Successfully logged into the server
-				err = n1ql.Ping()
+				err := ExecN1QLStmt(line, n1ql, w)
 				if err != nil {
-					fmt.Println(fgRed, "Error in sql Ping", reset)
-					fmt.Println(fgRed, err, reset)
 					return err
-
-				} else {
-					//fSuccessfully Pinged
-
-					err := N1QLCommandParser(line, n1ql, w)
-					if err != nil {
-						return err
-					}
 				}
 			}
 
-		} else {
-			//Not connected to a query service
-			err := errors.New("Not connected to any instance. Use \\CONNECT shell command to connect to an instance.")
-			return err
 		}
 	}
 
@@ -138,6 +132,9 @@ func WriteHelper(rows *sql.Rows, columns []string, values, valuePtrs []interface
 	b = nil
 	err = nil
 
+	// The first and second row represent the metadata. Because of the
+	// way the rows are returned we need to create a map with the
+	// correct data.
 	if rownum == 0 || rownum == 1 {
 		keys := make([]string, 0, len(dat))
 		for key, _ := range dat {
@@ -181,127 +178,120 @@ func WriteHelper(rows *sql.Rows, columns []string, values, valuePtrs []interface
 	return b, nil
 }
 
-func N1QLCommandParser(line string, n1ql *sql.DB, w io.Writer) error {
-	if strings.HasPrefix(strings.ToLower(line), "prepare") {
-		_, err := n1ql.Query(line)
-		fmt.Println("Im in here")
-		if err != nil {
-			return err
-		}
+func ExecN1QLStmt(line string, n1ql *sql.DB, w io.Writer) error {
+	//if strings.HasPrefix(strings.ToLower(line), "prepare") {
+
+	rows, err := n1ql.Query(line)
+
+	if err != nil {
+		return err
+
 	} else {
+		iter := 0
+		rownum := 0
 
-		rows, err := n1ql.Query(line)
+		var werr error
+		status := ""
+		var metrics []byte
+		metrics = nil
 
-		if err != nil {
-			return err
+		// Multi column projection
+		columns, _ := rows.Columns()
+		count := len(columns)
+		values := make([]interface{}, count)
+		valuePtrs := make([]interface{}, count)
 
-		} else {
-			iter := 0
-			rownum := 0
+		//Check if spacing is enough
+		_, werr = io.WriteString(w, "\n{\n")
 
-			var werr error
-			status := ""
-			var metrics []byte
-			metrics = nil
+		for rows.Next() {
 
-			// Multi column projection
-			columns, _ := rows.Columns()
-			count := len(columns)
-			values := make([]interface{}, count)
-			valuePtrs := make([]interface{}, count)
+			for i, _ := range columns {
+				valuePtrs[i] = &values[i]
+			}
 
-			//Check if spacing is enough
-			_, werr = io.WriteString(w, "\n{\n")
+			if rownum == 0 {
 
-			for rows.Next() {
+				// Get the first row to post process.
 
-				for i, _ := range columns {
-					valuePtrs[i] = &values[i]
-				}
+				extras, err := WriteHelper(rows, columns, values, valuePtrs, rownum)
 
-				if rownum == 0 {
-
-					// Get the first row to post process.
-
-					extras, err := WriteHelper(rows, columns, values, valuePtrs, rownum)
-
-					if extras == nil && err != nil {
-						return err
-					}
-
-					var dat map[string]interface{}
-
-					if err := json.Unmarshal(extras, &dat); err != nil {
-						return err
-					}
-
-					_, werr = io.WriteString(w, "    \"requestID\": \""+dat["requestID"].(string)+"\",\n")
-
-					jsonString, err := json.MarshalIndent(dat["signature"], "        ", "    ")
-
-					if err != nil {
-						return err
-					}
-					_, werr = io.WriteString(w, "    \"signature\": "+string(jsonString)+",\n")
-					_, werr = io.WriteString(w, "    \"results\" : [\n\t")
-					status = dat["status"].(string)
-					rownum++
-					continue
-				}
-
-				if rownum == 1 {
-
-					// Get the second row to post process as the metrics
-					var err error
-					metrics, err = WriteHelper(rows, columns, values, valuePtrs, rownum)
-
-					if metrics == nil && err != nil {
-						return err
-					}
-
-					//Wait until all the rows have been written to write the metrics.
-					rownum++
-					continue
-				}
-
-				if iter == 0 {
-					iter++
-				} else {
-					_, werr = io.WriteString(w, ", \n\t")
-				}
-
-				result, err := WriteHelper(rows, columns, values, valuePtrs, rownum)
-				if result == nil && err != nil {
+				if extras == nil && err != nil {
 					return err
 				}
 
-				_, werr = io.WriteString(w, string(result))
+				var dat map[string]interface{}
 
+				if err := json.Unmarshal(extras, &dat); err != nil {
+					return err
+				}
+
+				_, werr = io.WriteString(w, "    \"requestID\": \""+dat["requestID"].(string)+"\",\n")
+
+				jsonString, err := json.MarshalIndent(dat["signature"], "        ", "    ")
+
+				if err != nil {
+					return err
+				}
+				_, werr = io.WriteString(w, "    \"signature\": "+string(jsonString)+",\n")
+				_, werr = io.WriteString(w, "    \"results\" : [\n\t")
+				status = dat["status"].(string)
+				rownum++
+				continue
 			}
 
-			err = rows.Close()
-			if err != nil {
+			if rownum == 1 {
+
+				// Get the second row to post process as the metrics
+				var err error
+				metrics, err = WriteHelper(rows, columns, values, valuePtrs, rownum)
+
+				if metrics == nil && err != nil {
+					return err
+				}
+
+				//Wait until all the rows have been written to write the metrics.
+				rownum++
+				continue
+			}
+
+			if iter == 0 {
+				iter++
+			} else {
+				_, werr = io.WriteString(w, ", \n\t")
+			}
+
+			result, err := WriteHelper(rows, columns, values, valuePtrs, rownum)
+			if result == nil && err != nil {
 				return err
 			}
 
-			//Suffix to result array
-			_, werr = io.WriteString(w, "\n    ],")
+			_, werr = io.WriteString(w, string(result))
 
-			//Write the status and the metrics
-			if status != "" {
-				_, werr = io.WriteString(w, "\n    \"status\": \""+status+"\"")
-			}
-			if metrics != nil {
-				_, werr = io.WriteString(w, ",\n    \"metrics\": ")
-				_, werr = io.WriteString(w, string(metrics))
-			}
+		}
 
-			_, werr = io.WriteString(w, "\n}\n")
+		err = rows.Close()
+		if err != nil {
+			return err
+		}
 
-			// For any captured write error
-			if werr != nil {
-				return err
-			}
+		//Suffix to result array
+		_, werr = io.WriteString(w, "\n    ],")
+
+		//Write the status and the metrics
+		if status != "" {
+			_, werr = io.WriteString(w, "\n    \"status\": \""+status+"\"")
+		}
+		if metrics != nil {
+			_, werr = io.WriteString(w, ",\n    \"metrics\": ")
+			_, werr = io.WriteString(w, string(metrics))
+		}
+
+		_, werr = io.WriteString(w, "\n}\n")
+
+		// For any captured write error
+		if werr != nil {
+			return err
 		}
 	}
 
@@ -327,9 +317,12 @@ func stringMinifier(in string) (out string) {
 	return
 }
 
-func ShellCommandParser(line string) error {
+func ExecShellCmd(line string) error {
 
-	line = strings.ToLower(line)
+	arg1 := strings.Split(line, " ")
+	arg1str := strings.ToLower(arg1[0])
+
+	line = arg1str + " " + strings.Join(arg1[1:], " ")
 	line = strings.TrimSpace(line)
 
 	line = stringMinifier(line)
@@ -357,7 +350,7 @@ func ShellCommandParser(line string) error {
 
 	Cmd, ok := command.COMMAND_LIST[cmd_args[0]]
 	if ok == true {
-		err = Cmd.ParseCommand(cmd_args[1:])
+		err = Cmd.ExecCommand(cmd_args[1:])
 		if err != nil {
 			return err
 		}
@@ -366,17 +359,17 @@ func ShellCommandParser(line string) error {
 	}
 
 	if (strings.HasPrefix(line, "\\source") || strings.HasPrefix(line, "\\load")) &&
-		command.FILEINPUT == true {
+		command.FILE_INPUT == true {
 
-		fmt.Println("ISHA DEBUG : FILENAME ", command.FILEINPUT)
+		fmt.Println("ISHA DEBUG : FILENAME ", command.FILE_INPUT)
 	}
 
-	QUERYURL = command.QUERYURL
+	SERVICE_URL = command.SERVICE_URL
 
-	if QUERYURL != "" {
-		TiServer = QUERYURL
-		command.QUERYURL = ""
-		QUERYURL = ""
+	if SERVICE_URL != "" {
+		ServerFlag = SERVICE_URL
+		command.SERVICE_URL = ""
+		SERVICE_URL = ""
 	}
 
 	DISCONNECT = command.DISCONNECT

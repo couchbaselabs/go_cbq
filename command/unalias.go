@@ -11,8 +11,7 @@ package command
 
 import (
 	"errors"
-	"fmt"
-	"math"
+	"io"
 )
 
 /* Unalias Command */
@@ -21,7 +20,7 @@ type Unalias struct {
 }
 
 func (this *Unalias) Name() string {
-	return "Unalias"
+	return "UNALIAS"
 }
 
 func (this *Unalias) CommandCompletion() bool {
@@ -33,31 +32,35 @@ func (this *Unalias) MinArgs() int {
 }
 
 func (this *Unalias) MaxArgs() int {
-	return math.MaxInt64
+	return MAX_ARGS
 }
 
-func (this *Unalias) ParseCommand(queryurl []string) error {
+func (this *Unalias) ExecCommand(args []string) error {
+
+	//Cascade errors for non-existing alias into final error message
 	ferr := ""
-	if len(queryurl) > this.MaxArgs() {
+
+	if len(args) > this.MaxArgs() {
 		return errors.New("Too many arguments.")
 
-	} else if len(queryurl) < this.MinArgs() {
+	} else if len(args) < this.MinArgs() {
 		return errors.New("Too few arguments")
 
 	} else {
 
-		for _, k := range queryurl {
+		// Range over input aliases amd delete if they exist.
+		for _, k := range args {
 			_, ok := AliasCommand[k]
 			if ok {
 				delete(AliasCommand, k)
 			} else {
-				ferr = ferr + fmt.Errorf("Alias ", k, " doest exist.\n").Error()
+				ferr = ferr + errors.New("Alias "+k+" doest exist.\n").Error()
 			}
 		}
 
 	}
 	if ferr != "" {
-		return fmt.Errorf("%s", ferr)
+		return errors.New(ferr)
 	}
 
 	return nil
@@ -65,8 +68,7 @@ func (this *Unalias) ParseCommand(queryurl []string) error {
 }
 
 func (this *Unalias) PrintHelp() {
-	fmt.Println("\\UNALIAS <alias name>")
-	fmt.Println("Delete the alias given by <alias name>.")
-	fmt.Println("\tExample : \n\t        \\Unalias serverversion;\n\t        \\Unalias subcommand1 subcommand2 serverversion;")
-	fmt.Println()
+	io.WriteString(W, "\\UNALIAS <alias name>...")
+	printDesc(this.Name())
+	io.WriteString(W, "\n")
 }
