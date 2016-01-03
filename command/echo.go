@@ -11,7 +11,6 @@ package command
 
 import (
 	"errors"
-	"fmt"
 	"io"
 
 	"github.com/couchbase/query/value"
@@ -60,7 +59,7 @@ func (this *Echo) ExecCommand(args []string) error {
 			// If the value type is string then output it directly.
 			if v.Type() == value.STRING {
 
-				io.WriteString(W, fmt.Sprintf("%s", v))
+				io.WriteString(W, v.Actual().(string))
 				io.WriteString(W, " ")
 
 			} else {
@@ -71,7 +70,7 @@ func (this *Echo) ExecCommand(args []string) error {
 				if err != nil {
 					return err
 				}
-				io.WriteString(W, string(tmp))
+				io.WriteString(W, tmp)
 				io.WriteString(W, " ")
 			}
 		}

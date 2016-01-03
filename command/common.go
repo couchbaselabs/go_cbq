@@ -87,6 +87,7 @@ func Resolve(param string) (val value.Value, err error) {
 	   appropriately to check which stacks top value needs to be
 	   returned.
 	*/
+
 	param = strings.TrimSpace(param)
 
 	if strings.HasPrefix(param, "\\\\") {
@@ -98,7 +99,9 @@ func Resolve(param string) (val value.Value, err error) {
 		} else {
 
 			//Quote input properly so that resolve returns string and not binary.
-			st_val = "\"" + st_val + "\""
+			if !strings.HasPrefix(st_val, "\"") {
+				st_val = "\"" + st_val + "\""
+			}
 			val, err = StrToVal(st_val)
 		}
 
@@ -162,12 +165,24 @@ func Resolve(param string) (val value.Value, err error) {
 */
 func StrToVal(param string) (val value.Value, err error) {
 
-	//IshaFix : Isha use Newvaluefrom bytes after query code change exposes it.
-
 	param = strings.TrimSpace(param)
+
+	if strings.HasPrefix(param, "\"") {
+		if strings.HasSuffix(param, "\"") {
+			param = param[1 : len(param)-1]
+		}
+	}
+
 	bytes := []byte(param)
 
 	val = value.NewValue(bytes)
+
+	if val.Type() == value.BINARY {
+		param = "\"" + param + "\""
+		bytes := []byte(param)
+		val = value.NewValue(bytes)
+	}
+
 	err = nil
 	return
 
