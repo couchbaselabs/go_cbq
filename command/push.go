@@ -51,32 +51,22 @@ func (this *Push) ExecCommand(args []string) error {
 
 	} else if len(args) == 0 {
 		/* For \PUSH with no input arguments, push the top value
-		on the stack for every variable.
+		on the stack for every variable. Dont return errors in
+		this case as any one of these stacks can be empty.
 		*/
 
 		//Named Parameters
-		err = Pushparam_Helper(NamedParam)
-		if err != nil {
-			return err
-		}
+		Pushparam_Helper(NamedParam)
 
 		//Query Parameters
-		err = Pushparam_Helper(QueryParam)
-		if err != nil {
-			return err
-		}
+		Pushparam_Helper(QueryParam)
 
 		//User Defined Session Variables
-		err = Pushparam_Helper(UserDefSV)
-		if err != nil {
-			return err
-		}
+		Pushparam_Helper(UserDefSV)
 
 		//Predefined Session Variables
-		err = Pushparam_Helper(PreDefSV)
-		if err != nil {
-			return err
-		}
+		Pushparam_Helper(PreDefSV)
+		return nil
 
 	} else {
 		//Check what kind of parameter needs to be pushed.

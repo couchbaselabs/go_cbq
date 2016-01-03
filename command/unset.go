@@ -13,6 +13,8 @@ import (
 	"errors"
 	"io"
 	"strings"
+
+	go_n1ql "github.com/couchbaselabs/go_n1ql"
 )
 
 /* Unset Command */
@@ -59,6 +61,7 @@ func (this *Unset) ExecCommand(args []string) error {
 			if err != nil {
 				return err
 			}
+			go_n1ql.UnsetQueryParams(vble)
 
 		} else if strings.HasPrefix(args[0], "-") {
 			// For query parameters
@@ -69,6 +72,7 @@ func (this *Unset) ExecCommand(args []string) error {
 			if err != nil {
 				return err
 			}
+			go_n1ql.UnsetQueryParams(vble)
 
 		} else if strings.HasPrefix(args[0], "$") {
 			// For User defined session variables

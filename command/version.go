@@ -11,7 +11,6 @@ package command
 
 import (
 	"errors"
-	"fmt"
 	"io"
 )
 
@@ -43,8 +42,8 @@ func (this *Version) ExecCommand(args []string) error {
 	if len(args) != 0 {
 		return errors.New("Too many arguments")
 	} else {
-		fmt.Println("SHELL VERSION : " + SHELL_VERSION)
-		fmt.Println("Use N1QL commands select version() or select min_version() to display server version.")
+		io.WriteString(W, "SHELL VERSION : "+SHELL_VERSION+"\n")
+		io.WriteString(W, "Use N1QL commands select version() or select min_version() to display server version.\n")
 	}
 	return nil
 }

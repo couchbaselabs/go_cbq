@@ -48,32 +48,23 @@ func (this *Pop) ExecCommand(args []string) error {
 
 	} else if len(args) == 0 {
 		/* For \Pop with no input arguments, Pop the top value
-		on the stack for every variable.
+		on the stack for every variable. Dont return errors in
+		this case as any one of these stacks can be empty.
 		*/
 
 		//Named Parameters
-		err = Popparam_Helper(NamedParam)
-		if err != nil {
-			return err
-		}
+		Popparam_Helper(NamedParam)
 
 		//Query Parameters
-		err = Popparam_Helper(QueryParam)
-		if err != nil {
-			return err
-		}
+		Popparam_Helper(QueryParam)
 
 		//User Defined Session Variables
-		err = Popparam_Helper(UserDefSV)
-		if err != nil {
-			return err
-		}
+		Popparam_Helper(UserDefSV)
 
 		//Predefined Session Variables
-		err = Popparam_Helper(PreDefSV)
-		if err != nil {
-			return err
-		}
+		Popparam_Helper(PreDefSV)
+
+		return nil
 
 	} else {
 		//Check what kind of parameter needs to be popped
@@ -129,16 +120,15 @@ func (this *Pop) PrintHelp(desc bool) {
 	io.WriteString(W, "\n")
 }
 
-/* Push value from the Top of the stack onto the parameter stack.
+/* Pop the top value of the parameter stack.
    This is used by the \POP command with no arguments.
 */
 func Popparam_Helper(param map[string]*Stack) (err error) {
 	for _, v := range param {
-		t, err := v.Top()
+		_, err := v.Pop()
 		if err != nil {
 			return err
 		}
-		v.Push(t)
 	}
 	return
 }
