@@ -53,24 +53,19 @@ func (this *Echo) ExecCommand(args []string) error {
 			// Resolve each value to return a value.Value.
 			v, err := Resolve(val)
 			if err != nil {
-				return err
+				io.WriteString(W, "\n"+err.Error()+"\n")
+				continue
 			}
 
 			// If the value type is string then output it directly.
 			if v.Type() == value.STRING {
-
+				//Use the string value directly as output.
 				io.WriteString(W, v.Actual().(string))
 				io.WriteString(W, " ")
 
 			} else {
 				// Convert non string values to string and then output.
-
-				tmp, err := ValToStr(v)
-
-				if err != nil {
-					return err
-				}
-				io.WriteString(W, tmp)
+				io.WriteString(W, ValToStr(v))
 				io.WriteString(W, " ")
 			}
 		}

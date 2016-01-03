@@ -191,17 +191,10 @@ func StrToVal(param string) (val value.Value, err error) {
 /* The ValToStr method converts the input value into a
    string type.
 */
-func ValToStr(item value.Value) (param string, err error) {
-
-	//IshaFix : Call String() method in value.Value once it is added
-	bytes, err := item.MarshalJSON()
-	if err != nil {
-		param = ""
-	}
-	param = string(bytes)
-	err = nil
-
-	return
+func ValToStr(item value.Value) string {
+	//Call String() method in value.Value to convert
+	//value to string.
+	return item.String()
 }
 
 /* Helper function to push or set a value in a stack. */
@@ -312,10 +305,7 @@ func PushOrSet(args []string, pushvalue bool) error {
 			return err
 		}
 
-		val, err := ValToStr(v)
-		if err != nil {
-			return err
-		}
+		val := ValToStr(v)
 
 		val = strings.Replace(val, "\"", "", 2)
 		vble = "$" + vble
@@ -359,10 +349,7 @@ func PushOrSet(args []string, pushvalue bool) error {
 				return err
 			}
 
-			val, err := ValToStr(v)
-			if err != nil {
-				return err
-			}
+			val := ValToStr(v)
 
 			val = strings.Replace(val, "\"", "", 2)
 			go_n1ql.SetQueryParams(vble, val)
