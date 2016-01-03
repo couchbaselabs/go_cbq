@@ -12,7 +12,6 @@ package command
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io"
 	"strconv"
 	"strings"
