@@ -65,7 +65,16 @@ func init() {
    Default value : false
    Enable/Disable startup connection message for the shell
 */
-var quietFlag = flag.Bool("quiet", false, "Enable/Disable startup connection message for the shell \n\t\t Default : false \n\t\t Possible Values : true/false")
+var quietFlag bool
+
+func init() {
+	const (
+		defaultval = false
+		usage      = "Enable/Disable startup connection message for the shell \n\t\t Default : false \n\t\t Possible Values : true/false"
+	)
+	flag.BoolVar(&quietFlag, "quiet", defaultval, usage)
+	flag.BoolVar(&quietFlag, "q", defaultval, " Shorthand for -quiet")
+}
 
 /*
    Option        : -timeout or -t
@@ -277,7 +286,7 @@ func main() {
 
 	/* -quiet : Display Message only if flag not specified
 	 */
-	if !*quietFlag {
+	if !quietFlag {
 		s := fmt.Sprintln("Connect to " + ServerFlag + ". Type Ctrl-D to exit.\n")
 		io.WriteString(command.W, s)
 	}
