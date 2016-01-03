@@ -117,11 +117,10 @@ func Resolve(param string) (val value.Value, err error) {
 		return.
 		*/
 		key := param[1:]
-		fmt.Println(key)
 		v, ok := QueryParam[key]
 
 		if !ok {
-			fmt.Println(errors.New("The" + param + " parameter doesnt have a value set. Please use the \\SET or \\PUSH command to set its value first"))
+			err = errors.New("The" + param + " parameter doesnt have a value set. Please use the \\SET or \\PUSH command to set its value first")
 		} else {
 			val, err = v.Top()
 		}
@@ -202,7 +201,6 @@ func PushValue_Helper(set bool, param map[string]*Stack, vble, value string) (er
 	} else {
 		//Stack already exists
 		if ok {
-			//fmt.Println("Returned val from Resolve   ", v)
 			if set == true {
 				err = st_Val.SetTop(v)
 				if err != nil {
@@ -238,6 +236,9 @@ func PopValue_Helper(unset bool, param map[string]*Stack, vble string) (err erro
 					return err
 				}
 			}
+			//While unsetting also delete the stack for the
+			//given variable.
+			delete(param, vble)
 		} else {
 			err = errors.New("Parameter does not exist")
 		}
@@ -301,7 +302,7 @@ func PushOrSet(args []string, pushvalue bool) error {
 		if err != nil {
 			return err
 		}
-		//fmt.Println("DEBUG : NMDPARAM : ", vble, " VALUE : ", val)
+
 		val = strings.Replace(val, "\"", "", 2)
 		vble = "$" + vble
 		go_n1ql.SetQueryParams(vble, val)
@@ -335,7 +336,7 @@ func PushOrSet(args []string, pushvalue bool) error {
 			if err != nil {
 				return err
 			}
-			//fmt.Println("Setting Creds : ", string(ac))
+
 			go_n1ql.SetQueryParams("creds", string(ac))
 
 		} else {
@@ -348,7 +349,7 @@ func PushOrSet(args []string, pushvalue bool) error {
 			if err != nil {
 				return err
 			}
-			//fmt.Println("DEBUG : QUERYPARAM : ", vble, " VALUE : ", val)
+
 			val = strings.Replace(val, "\"", "", 2)
 			go_n1ql.SetQueryParams(vble, val)
 		}
