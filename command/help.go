@@ -10,9 +10,10 @@
 package command
 
 import (
-	"errors"
 	"io"
 	"strings"
+
+	"github.com/couchbase/query/errors"
 )
 
 /* Help Command */
@@ -36,13 +37,20 @@ func (this *Help) MaxArgs() int {
 	return MAX_ARGS
 }
 
-func (this *Help) ExecCommand(args []string) error {
+func (this *Help) ExecCommand(args []string) (int, string) {
 	/* Input Command : \HELP;
 	   Print Help information for all commands. */
 	if len(args) == 0 {
-		io.WriteString(W, "Help Information for all Shell Commands")
+		_, werr := io.WriteString(W, "Help Information for all Shell Commands")
+		if werr != nil {
+			return errors.WRITER_OUTPUT, werr.Error()
+		}
+
 		for _, val := range COMMAND_LIST {
-			val.PrintHelp(false)
+			err_code, err_str := val.PrintHelp(false)
+			if err_code != 0 {
+				return err_code, err_str
+			}
 		}
 	} else {
 		/* Input Command : \HELP SET \VERSION;
@@ -55,21 +63,30 @@ func (this *Help) ExecCommand(args []string) error {
 			}
 			cmd, ok := COMMAND_LIST[val]
 			if ok == true {
-				cmd.PrintHelp(true)
+				err_code, err_str := cmd.PrintHelp(true)
+				if err_code != 0 {
+					return err_code, err_str
+				}
 			} else {
-				io.WriteString(W, "Command does not exist. Use \\HELP; to list help for all shell commands.")
-				return errors.New("Command does not exist")
+				return errors.NO_SUCH_COMMAND, ""
 			}
 		}
 
 	}
-	return nil
+	return 0, ""
 }
 
-func (this *Help) PrintHelp(desc bool) {
-	io.WriteString(W, "\\HELP \n\\HELP <args>...\n")
+func (this *Help) PrintHelp(desc bool) (int, string) {
+	_, werr := io.WriteString(W, "\\HELP \n\\HELP <args>...\n")
 	if desc {
-		printDesc(this.Name())
+		err_code, err_str := printDesc(this.Name())
+		if err_code != 0 {
+			return err_code, err_str
+		}
 	}
-	io.WriteString(W, "\n")
+	_, werr = io.WriteString(W, "\n")
+	if werr != nil {
+		return errors.WRITER_OUTPUT, werr.Error()
+	}
+	return 0, ""
 }

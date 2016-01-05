@@ -29,40 +29,10 @@ const (
 	QRY_PROMPT2 = "   > "
 )
 
-/* The following variables are used to display the error
-   messages in red text and then reset the terminal prompt
-   color.
-*/
 var reset = "\x1b[0m"
 var fgRed = "\x1b[31m"
+
 var first = false
-
-/* The handleError method creates the error using the methods
-   defined in the n1ql errors package. This is where all the
-   shell errors are handled.
-*/
-func handleError(err error, server string) errors.Error {
-
-	if strings.Contains(strings.ToLower(err.Error()), "connection refused") {
-		return errors.NewShellErrorCannotConnect("Unable to connect to query service " + server)
-	} else if strings.Contains(strings.ToLower(err.Error()), "unsupported protocol") {
-		return errors.NewShellErrorUnsupportedProtocol("Unsupported Protocol Scheme " + server)
-	} else if strings.Contains(strings.ToLower(err.Error()), "no such host") {
-		return errors.NewShellErrorNoSuchHost("No such Host " + server)
-	} else if strings.Contains(strings.ToLower(err.Error()), "unknown port tcp") {
-		return errors.NewShellErrorUnknownPorttcp("Unknown port " + server)
-	} else if strings.Contains(strings.ToLower(err.Error()), "no host in request url") {
-		return errors.NewShellErrorNoHostInRequestUrl("No Host in request URL " + server)
-	} else if strings.Contains(strings.ToLower(err.Error()), "no route to host") {
-		return errors.NewShellErrorNoRouteToHost("No Route to host " + server)
-	} else if strings.Contains(strings.ToLower(err.Error()), "operation timed out") {
-		return errors.NewShellErrorOperationTimeout("Operation timed out. Check query service url " + server)
-	} else if strings.Contains(strings.ToLower(err.Error()), "network is unreachable") {
-		return errors.NewShellErrorUnreachableNetwork("Network is unreachable " + server)
-	} else {
-		return errors.NewError(err, "")
-	}
-}
 
 /* This method is used to handle user interaction with the
    cli. After combining the multi line input, it is sent to
@@ -81,7 +51,11 @@ func HandleInteractiveMode(prompt string) {
 	if homeDir == "" {
 		homeDir = os.Getenv("USERPROFILE")
 		if homeDir == "" {
-			io.WriteString(command.W, "Unable to determine home directory, history file disabled\n")
+			_, werr := io.WriteString(command.W, "Unable to determine home directory, history file disabled\n")
+			if werr != nil {
+				s_err := command.HandleError(errors.WRITER_OUTPUT, werr.Error())
+				command.PrintError(s_err)
+			}
 		}
 	}
 
@@ -92,7 +66,11 @@ func HandleInteractiveMode(prompt string) {
 	/* Load history from Home directory
 	   TODO : Once Histfile and Histsize are introduced then change this code
 	*/
-	LoadHistory(liner, homeDir)
+	err_code, err_string := LoadHistory(liner, homeDir)
+	if err_code != 0 {
+		s_err := command.HandleError(err_code, err_string)
+		command.PrintError(s_err)
+	}
 
 	go signalCatcher(liner)
 
@@ -114,7 +92,12 @@ func HandleInteractiveMode(prompt string) {
 		   but do not send them to be parsed.
 		*/
 		if strings.HasPrefix(line, "--") || strings.HasPrefix(line, "#") {
-			UpdateHistory(liner, homeDir, line)
+			err_code, err_string := UpdateHistory(liner, homeDir, line)
+			if err_code != 0 {
+				s_err := command.HandleError(err_code, err_string)
+				command.PrintError(s_err)
+			}
+
 			continue
 		}
 
@@ -131,20 +114,34 @@ func HandleInteractiveMode(prompt string) {
 				inputString = strings.TrimSuffix(inputString, QRY_EOL)
 			}
 			if inputString != "" {
-				UpdateHistory(liner, homeDir, inputString+QRY_EOL)
-				err = execute_input(inputString, os.Stdout)
+				err_code, err_string := UpdateHistory(liner, homeDir, inputString+QRY_EOL)
+				if err_code != 0 {
+					s_err := command.HandleError(err_code, err_string)
+					command.PrintError(s_err)
+				}
+				err_code, err_string = execute_input(inputString, os.Stdout)
 				/* Error handling for Shell errors and errors recieved from
 				   go_n1ql.
 				*/
-				if err != nil {
-					s_err := handleError(err, ServerFlag)
-					tmpstr := fmt.Sprintln(fgRed, "ERROR", s_err.Code(), ":", s_err, reset)
-					io.WriteString(command.W, tmpstr+"\n")
+				if err_code != 0 {
+					s_err := command.HandleError(err_code, err_string)
+					if err_code == errors.GON1QL_QUERY {
+						//Dont print the error code for query errors.
+						tmpstr := fmt.Sprintln(fgRed, s_err, reset)
+						io.WriteString(command.W, tmpstr+"\n")
+
+					} else {
+						command.PrintError(s_err)
+					}
 
 					if *errorExitFlag == true {
 						if first == false {
 							first = true
-							io.WriteString(command.W, "Exiting on first error encountered\n")
+							_, werr := io.WriteString(command.W, "Exiting on first error encountered\n")
+							if werr != nil {
+								s_err = command.HandleError(errors.WRITER_OUTPUT, werr.Error())
+								command.PrintError(s_err)
+							}
 							liner.Close()
 							os.Clearenv()
 							os.Exit(1)

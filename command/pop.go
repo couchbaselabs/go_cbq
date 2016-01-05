@@ -10,9 +10,10 @@
 package command
 
 import (
-	"errors"
 	"io"
 	"strings"
+
+	"github.com/couchbase/query/errors"
 )
 
 /* Pop Command */
@@ -36,15 +37,13 @@ func (this *Pop) MaxArgs() int {
 	return 1
 }
 
-func (this *Pop) ExecCommand(args []string) error {
-
-	var err error
+func (this *Pop) ExecCommand(args []string) (int, string) {
 
 	if len(args) > this.MaxArgs() {
-		return errors.New("Too many arguments")
+		return errors.TOO_MANY_ARGS, ""
 
 	} else if len(args) < this.MinArgs() {
-		return errors.New("Too few arguments")
+		return errors.TOO_FEW_ARGS, ""
 
 	} else if len(args) == 0 {
 		/* For \Pop with no input arguments, Pop the top value
@@ -64,8 +63,6 @@ func (this *Pop) ExecCommand(args []string) error {
 		//Predefined Session Variables
 		Popparam_Helper(PreDefSV)
 
-		return nil
-
 	} else {
 		//Check what kind of parameter needs to be popped
 
@@ -74,9 +71,9 @@ func (this *Pop) ExecCommand(args []string) error {
 			vble := args[0]
 			vble = vble[2:]
 
-			err = PopValue_Helper(false, NamedParam, vble)
-			if err != nil {
-				return err
+			err_code, err_string := PopValue_Helper(false, NamedParam, vble)
+			if err_code != 0 {
+				return err_code, err_string
 			}
 
 		} else if strings.HasPrefix(args[0], "-") {
@@ -84,9 +81,9 @@ func (this *Pop) ExecCommand(args []string) error {
 			vble := args[0]
 			vble = vble[1:]
 
-			err = PopValue_Helper(false, QueryParam, vble)
-			if err != nil {
-				return err
+			err_code, err_string := PopValue_Helper(false, QueryParam, vble)
+			if err_code != 0 {
+				return err_code, err_string
 			}
 
 		} else if strings.HasPrefix(args[0], "$") {
@@ -94,41 +91,48 @@ func (this *Pop) ExecCommand(args []string) error {
 			vble := args[0]
 			vble = vble[1:]
 
-			err = PopValue_Helper(false, UserDefSV, vble)
-			if err != nil {
-				return err
+			err_code, err_string := PopValue_Helper(false, UserDefSV, vble)
+			if err_code != 0 {
+				return err_code, err_string
 			}
 
 		} else {
 			// For Predefined session variables
 			vble := args[0]
 
-			err = PopValue_Helper(false, PreDefSV, vble)
-			if err != nil {
-				return err
+			err_code, err_string := PopValue_Helper(false, PreDefSV, vble)
+			if err_code != 0 {
+				return err_code, err_string
 			}
 		}
 	}
-	return nil
+	return 0, ""
 }
 
-func (this *Pop) PrintHelp(desc bool) {
-	io.WriteString(W, "\\POP \n\\POP <parameter>\n")
+func (this *Pop) PrintHelp(desc bool) (int, string) {
+	_, werr := io.WriteString(W, "\\POP \n\\POP <parameter>\n")
 	if desc {
-		printDesc(this.Name())
+		err_code, err_str := printDesc(this.Name())
+		if err_code != 0 {
+			return err_code, err_str
+		}
 	}
-	io.WriteString(W, "\n")
+	_, werr = io.WriteString(W, "\n")
+	if werr != nil {
+		return errors.WRITER_OUTPUT, werr.Error()
+	}
+	return 0, ""
 }
 
 /* Pop the top value of the parameter stack.
    This is used by the \POP command with no arguments.
 */
-func Popparam_Helper(param map[string]*Stack) (err error) {
+func Popparam_Helper(param map[string]*Stack) (int, string) {
 	for _, v := range param {
-		_, err := v.Pop()
-		if err != nil {
-			return err
+		_, err_code, err_str := v.Pop()
+		if err_code != 0 {
+			return err_code, err_str
 		}
 	}
-	return
+	return 0, ""
 }

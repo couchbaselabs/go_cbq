@@ -10,9 +10,9 @@
 package command
 
 import (
-	"errors"
 	"io"
 
+	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/value"
 )
 
@@ -37,49 +37,62 @@ func (this *Echo) MaxArgs() int {
 	return MAX_ARGS
 }
 
-func (this *Echo) ExecCommand(args []string) error {
-
+func (this *Echo) ExecCommand(args []string) (int, string) {
+	var werr error
 	if len(args) > this.MaxArgs() {
-		return errors.New("Too many arguments")
+		return errors.TOO_MANY_ARGS, ""
 
 	} else if len(args) < this.MinArgs() {
-		return errors.New("Too few arguments")
+		return errors.TOO_FEW_ARGS, ""
 
 	} else {
+		//This is to cascade errors at the end
 
 		// Range over the input arguments to echo.
 		for _, val := range args {
 
 			// Resolve each value to return a value.Value.
-			v, err := Resolve(val)
-			if err != nil {
-				io.WriteString(W, "\n"+err.Error()+"\n")
+			v, err_code, err_string := Resolve(val)
+			if err_code != 0 {
+				//Print each error as you see it.
+				s_err := HandleError(err_code, err_string)
+				PrintError(s_err)
 				continue
 			}
 
 			// If the value type is string then output it directly.
 			if v.Type() == value.STRING {
 				//Use the string value directly as output.
-				io.WriteString(W, v.Actual().(string))
-				io.WriteString(W, " ")
+				_, werr = io.WriteString(W, v.Actual().(string))
+				_, werr = io.WriteString(W, " ")
 
 			} else {
 				// Convert non string values to string and then output.
-				io.WriteString(W, ValToStr(v))
-				io.WriteString(W, " ")
+				_, werr = io.WriteString(W, ValToStr(v))
+				_, werr = io.WriteString(W, " ")
+
 			}
 		}
 	}
 
-	io.WriteString(W, "\n")
-	return nil
-
+	_, werr = io.WriteString(W, "\n")
+	if werr != nil {
+		return errors.WRITER_OUTPUT, werr.Error()
+	}
+	return 0, ""
 }
 
-func (this *Echo) PrintHelp(desc bool) {
-	io.WriteString(W, "\\ECHO <arg>...\n")
+func (this *Echo) PrintHelp(desc bool) (int, string) {
+	_, werr := io.WriteString(W, "\\ECHO <arg>...\n")
 	if desc {
-		printDesc(this.Name())
+		err_code, err_str := printDesc(this.Name())
+		if err_code != 0 {
+			return err_code, err_str
+		}
 	}
-	io.WriteString(W, "\n")
+	_, werr = io.WriteString(W, "\n")
+	if werr != nil {
+		return errors.WRITER_OUTPUT, werr.Error()
+	}
+	return 0, ""
 }

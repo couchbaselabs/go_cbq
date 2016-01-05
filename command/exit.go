@@ -10,8 +10,9 @@
 package command
 
 import (
-	"errors"
 	"io"
+
+	"github.com/couchbase/query/errors"
 )
 
 /* Exit and Quit Commands */
@@ -35,7 +36,7 @@ func (this *Exit) MaxArgs() int {
 	return 0
 }
 
-func (this *Exit) ExecCommand(args []string) error {
+func (this *Exit) ExecCommand(args []string) (int, string) {
 	/* Command to Exit the shell. We set the EXIT flag to true.
 	Once this command is processed, and executequery returns to
 	HandleInteractiveMode, handle errors (if any) and then exit
@@ -43,18 +44,28 @@ func (this *Exit) ExecCommand(args []string) error {
 	input argument then throw an error.
 	*/
 	if len(args) != 0 {
-		return errors.New("Too many arguments")
+		return errors.TOO_MANY_ARGS, ""
 	} else {
-		io.WriteString(W, "Exiting the shell.\n")
+		_, werr := io.WriteString(W, "Exiting the shell.\n")
+		if werr != nil {
+			return errors.WRITER_OUTPUT, werr.Error()
+		}
 		EXIT = true
 	}
-	return nil
+	return 0, ""
 }
 
-func (this *Exit) PrintHelp(desc bool) {
-	io.WriteString(W, "\\EXIT \n\\QUIT\n")
+func (this *Exit) PrintHelp(desc bool) (int, string) {
+	_, werr := io.WriteString(W, "\\EXIT \n\\QUIT\n")
 	if desc {
-		printDesc(this.Name())
+		err_code, err_str := printDesc(this.Name())
+		if err_code != 0 {
+			return err_code, err_str
+		}
 	}
-	io.WriteString(W, "\n")
+	_, werr = io.WriteString(W, "\n")
+	if werr != nil {
+		return errors.WRITER_OUTPUT, werr.Error()
+	}
+	return 0, ""
 }

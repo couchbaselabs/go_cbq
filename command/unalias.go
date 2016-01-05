@@ -10,8 +10,9 @@
 package command
 
 import (
-	"errors"
 	"io"
+
+	"github.com/couchbase/query/errors"
 )
 
 /* Unalias Command */
@@ -35,16 +36,15 @@ func (this *Unalias) MaxArgs() int {
 	return MAX_ARGS
 }
 
-func (this *Unalias) ExecCommand(args []string) error {
+func (this *Unalias) ExecCommand(args []string) (int, string) {
 
 	//Cascade errors for non-existing alias into final error message
-	ferr := ""
 
 	if len(args) > this.MaxArgs() {
-		return errors.New("Too many arguments.")
+		return errors.TOO_MANY_ARGS, ""
 
 	} else if len(args) < this.MinArgs() {
-		return errors.New("Too few arguments")
+		return errors.TOO_FEW_ARGS, ""
 
 	} else {
 
@@ -54,23 +54,27 @@ func (this *Unalias) ExecCommand(args []string) error {
 			if ok {
 				delete(AliasCommand, k)
 			} else {
-				ferr = ferr + errors.New("Alias "+k+" doest exist.\n").Error()
+				// Handle and print error as they appear.
+				s_err := HandleError(errors.NO_SUCH_ALIAS, " "+k+". ")
+				PrintError(s_err)
 			}
 		}
 
 	}
-	if ferr != "" {
-		return errors.New(ferr)
-	}
-
-	return nil
-
+	return 0, ""
 }
 
-func (this *Unalias) PrintHelp(desc bool) {
-	io.WriteString(W, "\\UNALIAS <alias name>...\n")
+func (this *Unalias) PrintHelp(desc bool) (int, string) {
+	_, werr := io.WriteString(W, "\\UNALIAS <alias name>...\n")
 	if desc {
-		printDesc(this.Name())
+		err_code, err_str := printDesc(this.Name())
+		if err_code != 0 {
+			return err_code, err_str
+		}
 	}
-	io.WriteString(W, "\n")
+	_, werr = io.WriteString(W, "\n")
+	if werr != nil {
+		return errors.WRITER_OUTPUT, werr.Error()
+	}
+	return 0, ""
 }

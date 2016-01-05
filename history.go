@@ -11,30 +11,39 @@ package main
 
 import (
 	"bufio"
-	"fmt"
 	"os"
 
+	"github.com/couchbase/query/errors"
 	"github.com/sbinet/liner"
 )
 
-func LoadHistory(liner *liner.State, dir string) {
+func LoadHistory(liner *liner.State, dir string) (int, string) {
 	if dir != "" {
-		ReadHistoryFromFile(liner, dir+"/.cbq_history")
+		err_code, err_str := ReadHistoryFromFile(liner, dir+"/.cbq_history")
+		if err_code != 0 {
+			return err_code, err_str
+		}
 	}
+	return 0, ""
 }
 
-func UpdateHistory(liner *liner.State, dir, line string) {
+func UpdateHistory(liner *liner.State, dir, line string) (int, string) {
 	liner.AppendHistory(line)
 	if dir != "" {
-		WriteHistoryToFile(liner, dir+"/.cbq_history")
+		err_code, err_str := WriteHistoryToFile(liner, dir+"/.cbq_history")
+		if err_code != 0 {
+			return err_code, err_str
+		}
 	}
+	return 0, ""
 }
 
-func WriteHistoryToFile(liner *liner.State, path string) {
+func WriteHistoryToFile(liner *liner.State, path string) (int, string) {
 
+	var err error
 	f, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600)
 	if err != nil {
-		return
+		return errors.FILE_OPEN, err.Error()
 	}
 
 	defer f.Close()
@@ -42,22 +51,31 @@ func WriteHistoryToFile(liner *liner.State, path string) {
 	writer := bufio.NewWriter(f)
 	_, err = liner.WriteHistory(writer)
 	if err != nil {
-		fmt.Printf("Error updating .cbq_history file: %v\n", err)
+		return errors.WRITE_FILE, err.Error()
 	} else {
-		writer.Flush()
+		err = writer.Flush()
+		if err != nil {
+			return errors.WRITER_OUTPUT, err.Error()
+		}
 	}
+	return 0, ""
 
 }
 
-func ReadHistoryFromFile(liner *liner.State, path string) {
+func ReadHistoryFromFile(liner *liner.State, path string) (int, string) {
 
+	var err error
 	f, err := os.Open(path)
 	if err != nil {
-		return
+		return errors.FILE_OPEN, err.Error()
 	}
 
 	defer f.Close()
 
 	reader := bufio.NewReader(f)
-	liner.ReadHistory(reader)
+	_, err = liner.ReadHistory(reader)
+	if err != nil {
+		return errors.READ_FILE, err.Error()
+	}
+	return 0, ""
 }

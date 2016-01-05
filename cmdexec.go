@@ -12,17 +12,21 @@ package main
 import (
 	"database/sql"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"sort"
 	"strings"
 	"unicode"
 
+	"github.com/couchbase/query/errors"
 	"github.com/couchbaselabs/go_cbq/command"
 )
 
-func execute_input(line string, w io.Writer) error {
+/*
+This method executes the input command or statement. It
+returns an error code and optionally a non empty error message.
+*/
+func execute_input(line string, w io.Writer) (int, string) {
 
 	command.W = w
 
@@ -42,22 +46,22 @@ func execute_input(line string, w io.Writer) error {
 		val, ok := command.AliasCommand[commandkey]
 
 		if !ok {
-			return errors.New("Alias " + commandkey + " doesnt exist." + val + "\n")
+			return errors.NO_SUCH_ALIAS, " : " + commandkey + "\n"
 		}
 
-		err := execute_input(val, w)
+		err_code, err_str := execute_input(val, w)
 		/* Error handling for Shell errors and errors recieved from
 		   go_n1ql.
 		*/
-		if err != nil {
-			return err
+		if err_code != 0 {
+			return err_code, err_str
 		}
 
 	} else if strings.HasPrefix(line, "\\") {
 		//This block handles the shell commands
-		err := ExecShellCmd(line)
-		if err != nil {
-			return err
+		err_code, err_str := ExecShellCmd(line)
+		if err_code != 0 {
+			return err_code, err_str
 		}
 
 	} else {
@@ -65,8 +69,7 @@ func execute_input(line string, w io.Writer) error {
 		// If connected to a query service then NoQueryService == false.
 		if NoQueryService == true {
 			//Not connected to a query service
-			err := errors.New("Not connected to any instance. Use \\CONNECT shell command to connect to an instance.")
-			return err
+			return errors.NO_CONNECTION, ""
 		} else {
 			/* Try opening a connection to the endpoint. If successful, ping.
 			   If successful execute the n1ql command. Else try to connect
@@ -74,27 +77,25 @@ func execute_input(line string, w io.Writer) error {
 			*/
 			n1ql, err := sql.Open("n1ql", ServerFlag)
 			if err != nil {
-				tmpstr := fmt.Sprintln(fgRed, "Error in sql Open", reset)
-				io.WriteString(w, tmpstr+"\n")
-				return err
+				return errors.GO_N1QL_OPEN, ""
 			} else {
 				//Successfully logged into the server
-				err := ExecN1QLStmt(line, n1ql, w)
-				if err != nil {
-					return err
+				err_code, err_str := ExecN1QLStmt(line, n1ql, w)
+				if err_code != 0 {
+					return err_code, err_str
 				}
 			}
 
 		}
 	}
 
-	return nil
+	return 0, ""
 }
 
-func WriteHelper(rows *sql.Rows, columns []string, values, valuePtrs []interface{}, rownum int) ([]byte, error) {
+func WriteHelper(rows *sql.Rows, columns []string, values, valuePtrs []interface{}, rownum int) ([]byte, int, string) {
 	//Scan the values into the respective columns
 	if err := rows.Scan(valuePtrs...); err != nil {
-		return nil, err
+		return nil, errors.ROWS_SCAN, err.Error()
 	}
 
 	dat := map[string]*json.RawMessage{}
@@ -110,7 +111,10 @@ func WriteHelper(rows *sql.Rows, columns []string, values, valuePtrs []interface
 
 		if string(b) != "" {
 			//Parse the sub values of the main map first.
-			json.Unmarshal(b, &parsed)
+			err = json.Unmarshal(b, &parsed)
+			if err != nil {
+				return nil, errors.JSON_UNMARSHAL, err.Error()
+			}
 
 			//Fill up final result object
 			dat[col] = parsed
@@ -123,7 +127,7 @@ func WriteHelper(rows *sql.Rows, columns []string, values, valuePtrs []interface
 		if len(columns) == 1 {
 			c, err = dat[col].MarshalJSON()
 			if err != nil {
-				return nil, err
+				return nil, errors.JSON_MARSHAL, err.Error()
 			}
 		}
 
@@ -146,7 +150,7 @@ func WriteHelper(rows *sql.Rows, columns []string, values, valuePtrs []interface
 			map_value := dat[keys[0]]
 			b, err = map_value.MarshalJSON()
 			if err != nil {
-				return nil, err
+				return nil, errors.JSON_MARSHAL, err.Error()
 			}
 
 		}
@@ -155,7 +159,7 @@ func WriteHelper(rows *sql.Rows, columns []string, values, valuePtrs []interface
 		if len(columns) != 1 {
 			b, err = json.Marshal(dat)
 			if err != nil {
-				return nil, err
+				return nil, errors.JSON_MARSHAL, err.Error()
 			}
 		} else {
 			b = c
@@ -166,25 +170,25 @@ func WriteHelper(rows *sql.Rows, columns []string, values, valuePtrs []interface
 	if *prettyFlag == true {
 		var data map[string]interface{}
 		if err := json.Unmarshal(b, &data); err != nil {
-			return nil, err
+			return nil, errors.JSON_UNMARSHAL, err.Error()
 		}
 
 		b, err = json.MarshalIndent(data, "        ", "    ")
 		if err != nil {
-			return nil, err
+			return nil, errors.JSON_MARSHAL, err.Error()
 		}
 	}
 
-	return b, nil
+	return b, 0, ""
 }
 
-func ExecN1QLStmt(line string, n1ql *sql.DB, w io.Writer) error {
+func ExecN1QLStmt(line string, n1ql *sql.DB, w io.Writer) (int, string) {
 	//if strings.HasPrefix(strings.ToLower(line), "prepare") {
 
 	rows, err := n1ql.Query(line)
 
 	if err != nil {
-		return err
+		return errors.GON1QL_QUERY, err.Error()
 
 	} else {
 		iter := 0
@@ -214,16 +218,16 @@ func ExecN1QLStmt(line string, n1ql *sql.DB, w io.Writer) error {
 
 				// Get the first row to post process.
 
-				extras, err := WriteHelper(rows, columns, values, valuePtrs, rownum)
+				extras, err_code, err_string := WriteHelper(rows, columns, values, valuePtrs, rownum)
 
-				if extras == nil && err != nil {
-					return err
+				if extras == nil && err_code != 0 {
+					return err_code, err_string
 				}
 
 				var dat map[string]interface{}
 
 				if err := json.Unmarshal(extras, &dat); err != nil {
-					return err
+					return errors.JSON_UNMARSHAL, err.Error()
 				}
 
 				_, werr = io.WriteString(w, "    \"requestID\": \""+dat["requestID"].(string)+"\",\n")
@@ -231,7 +235,7 @@ func ExecN1QLStmt(line string, n1ql *sql.DB, w io.Writer) error {
 				jsonString, err := json.MarshalIndent(dat["signature"], "        ", "    ")
 
 				if err != nil {
-					return err
+					return errors.JSON_MARSHAL, err.Error()
 				}
 				_, werr = io.WriteString(w, "    \"signature\": "+string(jsonString)+",\n")
 				_, werr = io.WriteString(w, "    \"results\" : [\n\t")
@@ -243,11 +247,13 @@ func ExecN1QLStmt(line string, n1ql *sql.DB, w io.Writer) error {
 			if rownum == 1 {
 
 				// Get the second row to post process as the metrics
-				var err error
-				metrics, err = WriteHelper(rows, columns, values, valuePtrs, rownum)
 
-				if metrics == nil && err != nil {
-					return err
+				var err_code int
+				var err_string string
+				metrics, err_code, err_string = WriteHelper(rows, columns, values, valuePtrs, rownum)
+
+				if metrics == nil && err_code != 0 {
+					return err_code, err_string
 				}
 
 				//Wait until all the rows have been written to write the metrics.
@@ -261,9 +267,9 @@ func ExecN1QLStmt(line string, n1ql *sql.DB, w io.Writer) error {
 				_, werr = io.WriteString(w, ", \n\t")
 			}
 
-			result, err := WriteHelper(rows, columns, values, valuePtrs, rownum)
-			if result == nil && err != nil {
-				return err
+			result, err_code, err_string := WriteHelper(rows, columns, values, valuePtrs, rownum)
+			if result == nil && err_code != 0 {
+				return err_code, err_string
 			}
 
 			_, werr = io.WriteString(w, string(result))
@@ -272,7 +278,7 @@ func ExecN1QLStmt(line string, n1ql *sql.DB, w io.Writer) error {
 
 		err = rows.Close()
 		if err != nil {
-			return err
+			return errors.ROWS_CLOSE, err.Error()
 		}
 
 		//Suffix to result array
@@ -291,11 +297,11 @@ func ExecN1QLStmt(line string, n1ql *sql.DB, w io.Writer) error {
 
 		// For any captured write error
 		if werr != nil {
-			return err
+			return errors.WRITER_OUTPUT, werr.Error()
 		}
 	}
 
-	return nil
+	return 0, ""
 }
 
 /* From
@@ -317,7 +323,7 @@ func stringMinifier(in string) (out string) {
 	return
 }
 
-func ExecShellCmd(line string) error {
+func ExecShellCmd(line string) (int, string) {
 
 	arg1 := strings.Split(line, " ")
 	arg1str := strings.ToLower(arg1[0])
@@ -338,7 +344,7 @@ func ExecShellCmd(line string) error {
 			line = r.Replace(line)
 
 		} else {
-			return errors.New("Unbalanced Paranthesis in input.")
+			return errors.UNBALANCED_PAREN, ""
 		}
 
 	}
@@ -346,16 +352,15 @@ func ExecShellCmd(line string) error {
 	cmd_args := strings.Split(line, " ")
 
 	//Lookup Command from function registry
-	var err error
 
 	Cmd, ok := command.COMMAND_LIST[cmd_args[0]]
 	if ok == true {
-		err = Cmd.ExecCommand(cmd_args[1:])
-		if err != nil {
-			return err
+		err_code, err_str := Cmd.ExecCommand(cmd_args[1:])
+		if err_code != 0 {
+			return err_code, err_str
 		}
 	} else {
-		return errors.New("Command doesnt exist. Use help for command help.")
+		return errors.NO_SUCH_COMMAND, ""
 	}
 
 	if (strings.HasPrefix(line, "\\source") || strings.HasPrefix(line, "\\load")) &&
@@ -379,5 +384,5 @@ func ExecShellCmd(line string) error {
 	}
 
 	EXIT = command.EXIT
-	return nil
+	return 0, ""
 }

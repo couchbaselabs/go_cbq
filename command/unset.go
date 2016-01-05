@@ -10,10 +10,10 @@
 package command
 
 import (
-	"errors"
 	"io"
 	"strings"
 
+	"github.com/couchbase/query/errors"
 	go_n1ql "github.com/couchbaselabs/go_n1ql"
 )
 
@@ -38,16 +38,15 @@ func (this *Unset) MaxArgs() int {
 	return 1
 }
 
-func (this *Unset) ExecCommand(args []string) error {
+func (this *Unset) ExecCommand(args []string) (int, string) {
 	/* Command to Unset the value of the given parameter.
 	 */
-	var err error
 
 	if len(args) > this.MaxArgs() {
-		return errors.New("Too many arguments")
+		return errors.TOO_MANY_ARGS, ""
 
 	} else if len(args) < this.MinArgs() {
-		return errors.New("Too few arguments")
+		return errors.TOO_FEW_ARGS, ""
 
 	} else {
 		//Check what kind of parameter needs to be Unset.
@@ -57,9 +56,9 @@ func (this *Unset) ExecCommand(args []string) error {
 			vble := args[0]
 			vble = vble[2:]
 
-			err = PopValue_Helper(true, NamedParam, vble)
-			if err != nil {
-				return err
+			err_code, err_str := PopValue_Helper(true, NamedParam, vble)
+			if err_code != 0 {
+				return err_code, err_str
 			}
 			go_n1ql.UnsetQueryParams(vble)
 
@@ -68,9 +67,9 @@ func (this *Unset) ExecCommand(args []string) error {
 			vble := args[0]
 			vble = vble[1:]
 
-			err = PopValue_Helper(true, QueryParam, vble)
-			if err != nil {
-				return err
+			err_code, err_str := PopValue_Helper(true, QueryParam, vble)
+			if err_code != 0 {
+				return err_code, err_str
 			}
 			go_n1ql.UnsetQueryParams(vble)
 
@@ -79,28 +78,35 @@ func (this *Unset) ExecCommand(args []string) error {
 			vble := args[0]
 			vble = vble[1:]
 
-			err = PopValue_Helper(true, UserDefSV, vble)
-			if err != nil {
-				return err
+			err_code, err_str := PopValue_Helper(true, UserDefSV, vble)
+			if err_code != 0 {
+				return err_code, err_str
 			}
 
 		} else {
 			// For Predefined session variables
 			vble := args[0]
 
-			err = PopValue_Helper(true, PreDefSV, vble)
-			if err != nil {
-				return err
+			err_code, err_str := PopValue_Helper(true, PreDefSV, vble)
+			if err_code != 0 {
+				return err_code, err_str
 			}
 		}
 	}
-	return err
+	return 0, ""
 }
 
-func (this *Unset) PrintHelp(desc bool) {
-	io.WriteString(W, "\\UNSET <parameter>\n")
+func (this *Unset) PrintHelp(desc bool) (int, string) {
+	_, werr := io.WriteString(W, "\\UNSET <parameter>\n")
 	if desc {
-		printDesc(this.Name())
+		err_code, err_str := printDesc(this.Name())
+		if err_code != 0 {
+			return err_code, err_str
+		}
 	}
-	io.WriteString(W, "\n")
+	_, werr = io.WriteString(W, "\n")
+	if werr != nil {
+		return errors.WRITER_OUTPUT, werr.Error()
+	}
+	return 0, ""
 }

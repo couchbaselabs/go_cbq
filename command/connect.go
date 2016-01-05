@@ -10,8 +10,9 @@
 package command
 
 import (
-	"errors"
 	"io"
+
+	"github.com/couchbase/query/errors"
 )
 
 /* Connect Command */
@@ -35,28 +36,35 @@ func (this *Connect) MaxArgs() int {
 	return 1
 }
 
-func (this *Connect) ExecCommand(args []string) error {
+func (this *Connect) ExecCommand(args []string) (int, string) {
 	/* Command to connect to the input query service or cluster
 	   endpoint. Use the Server flag and set it to the value
 	   of service_url. If the command contains no input argument
 	   or more than 1 argument then throw an error.
 	*/
 	if len(args) > this.MaxArgs() {
-		return errors.New("Too many arguments")
+		return errors.TOO_MANY_ARGS, ""
 
 	} else if len(args) < this.MinArgs() {
-		return errors.New("Too few arguments")
+		return errors.TOO_FEW_ARGS, ""
 	} else {
 		SERVICE_URL = args[0]
 		io.WriteString(W, "\nEndpoint to Connect to : "+SERVICE_URL+" . Type Ctrl-D / \\exit / \\quit to exit.\n")
 	}
-	return nil
+	return 0, ""
 }
 
-func (this *Connect) PrintHelp(desc bool) {
-	io.WriteString(W, "\\CONNECT <url>\n")
+func (this *Connect) PrintHelp(desc bool) (int, string) {
+	_, werr := io.WriteString(W, "\\CONNECT <url>\n")
 	if desc {
-		printDesc(this.Name())
+		err_code, err_str := printDesc(this.Name())
+		if err_code != 0 {
+			return err_code, err_str
+		}
 	}
-	io.WriteString(W, "\n")
+	_, werr = io.WriteString(W, "\n")
+	if werr != nil {
+		return errors.WRITER_OUTPUT, werr.Error()
+	}
+	return 0, ""
 }

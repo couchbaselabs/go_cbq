@@ -10,8 +10,9 @@
 package command
 
 import (
-	"errors"
 	"io"
+
+	"github.com/couchbase/query/errors"
 	//"github.com/sbinet/liner"
 )
 
@@ -36,14 +37,14 @@ func (this *Source) MaxArgs() int {
 	return 1
 }
 
-func (this *Source) ExecCommand(args []string) error {
+func (this *Source) ExecCommand(args []string) (int, string) {
 	/* Command to load a file into the shell.
 	 */
 	if len(args) > this.MaxArgs() {
-		return errors.New("Too many arguments")
+		return errors.TOO_MANY_ARGS, ""
 
 	} else if len(args) < this.MinArgs() {
-		return errors.New("Too few arguments")
+		return errors.TOO_FEW_ARGS, ""
 	} else {
 		/* This case needs to be handled in the ShellCommand
 		   in the main package, since we need to run each
@@ -53,13 +54,20 @@ func (this *Source) ExecCommand(args []string) error {
 		*/
 		FILE_INPUT = true
 	}
-	return nil
+	return 0, ""
 }
 
-func (this *Source) PrintHelp(desc bool) {
-	io.WriteString(W, "\\SOURCE <filename>\n")
+func (this *Source) PrintHelp(desc bool) (int, string) {
+	_, werr := io.WriteString(W, "\\SOURCE <filename>\n")
 	if desc {
-		printDesc(this.Name())
+		err_code, err_str := printDesc(this.Name())
+		if err_code != 0 {
+			return err_code, err_str
+		}
 	}
-	io.WriteString(W, "\n")
+	_, werr = io.WriteString(W, "\n")
+	if werr != nil {
+		return errors.WRITER_OUTPUT, werr.Error()
+	}
+	return 0, ""
 }

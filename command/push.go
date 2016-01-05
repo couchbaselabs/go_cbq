@@ -10,8 +10,9 @@
 package command
 
 import (
-	"errors"
 	"io"
+
+	"github.com/couchbase/query/errors"
 )
 
 /* Push Command */
@@ -35,19 +36,18 @@ func (this *Push) MaxArgs() int {
 	return 2
 }
 
-func (this *Push) ExecCommand(args []string) error {
+func (this *Push) ExecCommand(args []string) (int, string) {
 	/* Command to set the value of the given parameter to
 	   the input value. The top value of the parameter stack
 	   is modified. If the command contains no input argument
 	   or more than 1 argument then throw an error.
 	*/
-	var err error = nil
 
 	if len(args) > this.MaxArgs() {
-		return errors.New("Too many arguments")
+		return errors.TOO_MANY_ARGS, ""
 
 	} else if len(args) == 1 {
-		return errors.New("Too few arguments")
+		return errors.TOO_FEW_ARGS, ""
 
 	} else if len(args) == 0 {
 		/* For \PUSH with no input arguments, push the top value
@@ -66,36 +66,42 @@ func (this *Push) ExecCommand(args []string) error {
 
 		//Predefined Session Variables
 		Pushparam_Helper(PreDefSV)
-		return nil
 
 	} else {
 		//Check what kind of parameter needs to be pushed.
-		err = PushOrSet(args, false)
-		if err != nil {
-			return err
+		err_code, err_Str := PushOrSet(args, false)
+		if err_code != 0 {
+			return err_code, err_Str
 		}
 	}
-	return err
+	return 0, ""
 }
 
-func (this *Push) PrintHelp(desc bool) {
-	io.WriteString(W, "\\PUSH \n\\PUSH <parameter> <value>\n")
+func (this *Push) PrintHelp(desc bool) (int, string) {
+	_, werr := io.WriteString(W, "\\PUSH \n\\PUSH <parameter> <value>\n")
 	if desc {
-		printDesc(this.Name())
+		err_code, err_str := printDesc(this.Name())
+		if err_code != 0 {
+			return err_code, err_str
+		}
 	}
-	io.WriteString(W, "\n")
+	_, werr = io.WriteString(W, "\n")
+	if werr != nil {
+		return errors.WRITER_OUTPUT, werr.Error()
+	}
+	return 0, ""
 }
 
 /* Push value from the Top of the stack onto the parameter stack.
    This is used by the \PUSH command with no arguments.
 */
-func Pushparam_Helper(param map[string]*Stack) (err error) {
+func Pushparam_Helper(param map[string]*Stack) (int, string) {
 	for _, v := range param {
-		t, err := v.Top()
-		if err != nil {
-			return err
+		t, err_code, err_string := v.Top()
+		if err_code != 0 {
+			return err_code, err_string
 		}
 		v.Push(t)
 	}
-	return
+	return 0, ""
 }

@@ -10,8 +10,9 @@
 package command
 
 import (
-	"errors"
 	"io"
+
+	"github.com/couchbase/query/errors"
 )
 
 /* Set Command */
@@ -35,32 +36,38 @@ func (this *Set) MaxArgs() int {
 	return 2
 }
 
-func (this *Set) ExecCommand(args []string) error {
+func (this *Set) ExecCommand(args []string) (int, string) {
 	/* Command to set the value of the given parameter to
 	   the input value. The top value of the parameter stack
 	   is modified. If the command contains no input argument
 	   or more than 1 argument then throw an error.
 	*/
-	var err error
 
 	if len(args) > this.MaxArgs() {
-		return errors.New("Too many arguments")
+		return errors.TOO_MANY_ARGS, ""
 	} else if len(args) < this.MinArgs() {
-		return errors.New("Too few arguments")
+		return errors.TOO_FEW_ARGS, ""
 	} else {
 		//Check what kind of parameter needs to be set.
-		err = PushOrSet(args, true)
-		if err != nil {
-			return err
+		err_code, err_str := PushOrSet(args, true)
+		if err_code != 0 {
+			return err_code, err_str
 		}
 	}
-	return err
+	return 0, ""
 }
 
-func (this *Set) PrintHelp(desc bool) {
-	io.WriteString(W, "\\SET <parameter> <value>\n")
+func (this *Set) PrintHelp(desc bool) (int, string) {
+	_, werr := io.WriteString(W, "\\SET <parameter> <value>\n")
 	if desc {
-		printDesc(this.Name())
+		err_code, err_str := printDesc(this.Name())
+		if err_code != 0 {
+			return err_code, err_str
+		}
 	}
-	io.WriteString(W, "\n")
+	_, werr = io.WriteString(W, "\n")
+	if werr != nil {
+		return errors.WRITER_OUTPUT, werr.Error()
+	}
+	return 0, ""
 }

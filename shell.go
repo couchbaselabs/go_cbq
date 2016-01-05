@@ -11,7 +11,6 @@ package main
 
 import (
 	"encoding/json"
-	"errors"
 	"flag"
 	"fmt"
 	"golang.org/x/crypto/ssh/terminal"
@@ -19,6 +18,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/couchbase/query/errors"
 	"github.com/couchbaselabs/go_cbq/command"
 	go_n1ql "github.com/couchbaselabs/go_n1ql"
 )
@@ -250,11 +250,10 @@ func main() {
 	command.W = os.Stdout
 
 	if scriptFlag != "" {
-		err := execute_input(scriptFlag, os.Stdout)
-		if err != nil {
-			s_err := handleError(err, ServerFlag)
-			s := fmt.Sprintln(fgRed, "ERROR", s_err.Code(), ":", s_err, reset)
-			io.WriteString(command.W, s+"\n")
+		err_code, err_str := execute_input(scriptFlag, os.Stdout)
+		if err_code != 0 {
+			s_err := command.HandleError(err_code, err_str)
+			command.PrintError(s_err)
 			os.Exit(1)
 		}
 		os.Exit(0)
@@ -288,7 +287,11 @@ func main() {
 	 */
 	if !quietFlag {
 		s := fmt.Sprintln("Connect to " + ServerFlag + ". Type Ctrl-D to exit.\n")
-		io.WriteString(command.W, s)
+		_, werr := io.WriteString(command.W, s)
+		if werr != nil {
+			s_err := command.HandleError(errors.WRITER_OUTPUT, werr.Error())
+			command.PrintError(s_err)
+		}
 	}
 
 	/* -version : Display the version of the shell and then exit.
@@ -296,7 +299,7 @@ func main() {
 	if versionFlag == true {
 		dummy := []string{}
 		cmd := command.Version{}
-		_ = cmd.ExecCommand(dummy)
+		cmd.ExecCommand(dummy)
 		os.Exit(0)
 	}
 
@@ -308,22 +311,23 @@ func main() {
 
 	if userFlag != "" {
 		s := fmt.Sprintln("Enter Password: ")
-		io.WriteString(command.W, s)
-
+		_, werr := io.WriteString(command.W, s)
+		if werr != nil {
+			s_err := command.HandleError(errors.WRITER_OUTPUT, werr.Error())
+			command.PrintError(s_err)
+		}
 		password, err := terminal.ReadPassword(0)
 		if err == nil {
 			if string(password) == "" {
-				s_err := handleError(errors.New("Empty password string."), ServerFlag)
-				s := fmt.Sprintln(fgRed, "ERROR", s_err.Code(), ":", s_err, reset)
-				io.WriteString(command.W, s+"\n")
+				s_err := command.HandleError(errors.INVALID_PASSWORD, "")
+				command.PrintError(s_err)
 				os.Exit(1)
 			} else {
 				creds = append(creds, command.Credential{"user": userFlag, "pass": string(password)})
 			}
 		} else {
-			s_err := handleError(err, ServerFlag)
-			s := fmt.Sprintln(fgRed, "ERROR", s_err.Code(), ":", s_err, reset)
-			io.WriteString(command.W, s+"\n")
+			s_err := command.HandleError(errors.INVALID_PASSWORD, err.Error())
+			command.PrintError(s_err)
 			os.Exit(1)
 		}
 	}
@@ -337,15 +341,18 @@ func main() {
 		/* No credentials exist. This can still be used to connect to
 		   un-authenticated servers.
 		*/
-		io.WriteString(command.W, "No Input Credentials. In order to connect to a server with authentication, please provide credentials.\n")
+		_, werr := io.WriteString(command.W, "No Input Credentials. In order to connect to a server with authentication, please provide credentials.\n")
+		if werr != nil {
+			s_err := command.HandleError(errors.WRITER_OUTPUT, werr.Error())
+			command.PrintError(s_err)
+		}
 
 	} else if credsFlag != "" {
 
-		creds_ret, err := command.ToCreds(credsFlag)
-		if err != nil {
-			s_err := handleError(err, ServerFlag)
-			s := fmt.Sprintln(fgRed, "ERROR", s_err.Code(), ":", s_err, reset)
-			io.WriteString(command.W, s+"\n")
+		creds_ret, err_code, err_string := command.ToCreds(credsFlag)
+		if err_code != 0 {
+			s_err := command.HandleError(err_code, err_string)
+			command.PrintError(s_err)
 		}
 		for _, v := range creds_ret {
 			creds = append(creds, v)
@@ -367,9 +374,8 @@ func main() {
 		ac, err := json.Marshal(creds)
 		if err != nil {
 			//Error while Marshalling
-			s_err := handleError(err, ServerFlag)
-			s := fmt.Sprintln(fgRed, "ERROR", s_err.Code(), ":", s_err, reset)
-			io.WriteString(command.W, s+"\n")
+			s_err := command.HandleError(errors.JSON_MARSHAL, err.Error())
+			command.PrintError(s_err)
 			os.Exit(1)
 		}
 		go_n1ql.SetQueryParams("creds", string(ac))

@@ -10,10 +10,11 @@
 package command
 
 import (
-	"errors"
 	"fmt"
 	"io"
 	"strings"
+
+	"github.com/couchbase/query/errors"
 )
 
 /* Alias Command */
@@ -37,28 +38,31 @@ func (this *Alias) MaxArgs() int {
 	return MAX_ALIASES
 }
 
-func (this *Alias) ExecCommand(args []string) error {
+func (this *Alias) ExecCommand(args []string) (int, string) {
 
 	if len(args) > this.MaxArgs() {
-		return errors.New("Too many arguments.")
+		return errors.TOO_MANY_ARGS, ""
 
 	} else if len(args) < this.MinArgs() {
 
 		if len(args) == 0 {
 			// \ALIAS without input args lists the aliases present.
 			if len(AliasCommand) == 0 {
-				io.WriteString(W, "There are no defined command aliases. Use \\ALIAS <name> <value> to define an alias.\n")
+				return errors.NO_SUCH_ALIAS, ""
 			}
 
 			for k, v := range AliasCommand {
 
 				tmp := fmt.Sprintf("%-14s %-14s\n", k, v)
-				io.WriteString(W, tmp)
+				_, werr := io.WriteString(W, tmp)
+				if werr != nil {
+					return errors.WRITER_OUTPUT, werr.Error()
+				}
 			}
 
 		} else {
 			// Error out if it has 1 argument.
-			return errors.New("Too few arguments")
+			return errors.TOO_FEW_ARGS, ""
 		}
 
 	} else {
@@ -75,14 +79,21 @@ func (this *Alias) ExecCommand(args []string) error {
 		}
 
 	}
-	return nil
+	return 0, ""
 
 }
 
-func (this *Alias) PrintHelp(desc bool) {
-	io.WriteString(W, "\\ALIAS \n\\ALIAS <command name> <command>\n")
+func (this *Alias) PrintHelp(desc bool) (int, string) {
+	_, werr := io.WriteString(W, "\\ALIAS \n\\ALIAS <command name> <command>\n")
 	if desc {
-		printDesc(this.Name())
+		err_code, err_str := printDesc(this.Name())
+		if err_code != 0 {
+			return err_code, err_str
+		}
 	}
-	io.WriteString(W, "\n")
+	_, werr = io.WriteString(W, "\n")
+	if werr != nil {
+		return errors.WRITER_OUTPUT, werr.Error()
+	}
+	return 0, ""
 }

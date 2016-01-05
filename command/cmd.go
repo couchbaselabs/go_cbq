@@ -87,7 +87,7 @@ type ShellCommand interface {
 	/* Returns the Maximum number of input arguments allowed by the function */
 	MaxArgs() int
 	/* Method that implements the functionality */
-	ExecCommand(args []string) error
+	ExecCommand(args []string) (int, string)
 	/* Print Help information for command and its usage with an example */
-	PrintHelp(desc bool)
+	PrintHelp(desc bool) (int, string)
 }

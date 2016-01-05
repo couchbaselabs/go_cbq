@@ -10,9 +10,7 @@
 package command
 
 import (
-	"errors"
-	"fmt"
-
+	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/value"
 )
 
@@ -33,26 +31,30 @@ func (stack *Stack) Push(val value.Value) {
 /* Return the top element in the stack. If the stack
    is empty then return ZERO_VALUE.
 */
-func (stack *Stack) Top() (val value.Value, err error) {
+func (stack *Stack) Top() (val value.Value, err_code int, err_str string) {
 	if stack.Len() == 0 {
 		val = nil
-		err = errors.New("Stack is Empty")
+		err_code = errors.STACK_EMPTY
+		err_str = ""
 	} else {
 		x := stack.Len() - 1
 		val = (*stack)[x]
-		err = nil
+		err_code = 0
+		err_str = ""
 	}
 
 	return
 }
 
-func (stack *Stack) SetTop(v value.Value) (err error) {
+func (stack *Stack) SetTop(v value.Value) (err_code int, err_str string) {
 	if stack.Len() == 0 {
-		fmt.Println(errors.New("Stack is Empty. Please use \\PUSH"))
+		err_code = errors.STACK_EMPTY
+		err_str = ""
 	} else {
 		x := stack.Len() - 1
 		(*stack)[x] = v
-		err = nil
+		err_code = 0
+		err_str = ""
 	}
 	return
 }
@@ -60,15 +62,17 @@ func (stack *Stack) SetTop(v value.Value) (err error) {
 /* Delete the top element in the stack. If the stack
    is empty then print err stack empty
 */
-func (stack *Stack) Pop() (val value.Value, err error) {
+func (stack *Stack) Pop() (val value.Value, err_code int, err_str string) {
 	if stack.Len() == 0 {
 		val = nil
-		err = errors.New("Stack is Empty. Cannot Pop()")
+		err_code = errors.STACK_EMPTY
+		err_str = ""
 	} else {
 		x := stack.Len() - 1
 		val = (*stack)[x]
 		*stack = (*stack)[:x]
-		err = nil
+		err_code = 0
+		err_str = ""
 	}
 
 	return

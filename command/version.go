@@ -10,8 +10,9 @@
 package command
 
 import (
-	"errors"
 	"io"
+
+	"github.com/couchbase/query/errors"
 )
 
 /* Version Command */
@@ -35,23 +36,33 @@ func (this *Version) MaxArgs() int {
 	return 0
 }
 
-func (this *Version) ExecCommand(args []string) error {
+func (this *Version) ExecCommand(args []string) (int, string) {
 	/* Print the shell version. If the command contains an input
 	   argument then throw an error.
 	*/
 	if len(args) != 0 {
-		return errors.New("Too many arguments")
+		return errors.TOO_MANY_ARGS, ""
 	} else {
-		io.WriteString(W, "SHELL VERSION : "+SHELL_VERSION+"\n")
-		io.WriteString(W, "Use N1QL commands select version() or select min_version() to display server version.\n")
+		_, werr := io.WriteString(W, "SHELL VERSION : "+SHELL_VERSION+"\n")
+		_, werr = io.WriteString(W, "Use N1QL commands select version() or select min_version() to display server version.\n")
+		if werr != nil {
+			return errors.WRITER_OUTPUT, werr.Error()
+		}
 	}
-	return nil
+	return 0, ""
 }
 
-func (this *Version) PrintHelp(desc bool) {
-	io.WriteString(W, "\\VERSION\n")
+func (this *Version) PrintHelp(desc bool) (int, string) {
+	_, werr := io.WriteString(W, "\\VERSION\n")
 	if desc {
-		printDesc(this.Name())
+		err_code, err_str := printDesc(this.Name())
+		if err_code != 0 {
+			return err_code, err_str
+		}
 	}
-	io.WriteString(W, "\n")
+	_, werr = io.WriteString(W, "\n")
+	if werr != nil {
+		return errors.WRITER_OUTPUT, werr.Error()
+	}
+	return 0, ""
 }

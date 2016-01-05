@@ -10,8 +10,9 @@
 package command
 
 import (
-	"errors"
 	"io"
+
+	"github.com/couchbase/query/errors"
 )
 
 /* Disconnect Command */
@@ -35,26 +36,33 @@ func (this *Disconnect) MaxArgs() int {
 	return 0
 }
 
-func (this *Disconnect) ExecCommand(args []string) error {
+func (this *Disconnect) ExecCommand(args []string) (int, string) {
 	/* Command to disconnect service. Use the NoQueryService
 	   flag value and the disconnect flag value to determine
 	   disconnection. If the command contains an input argument
 	   then throw an error.
 	*/
 	if len(args) != 0 {
-		return errors.New("Too many arguments")
+		return errors.TOO_MANY_ARGS, ""
 
 	} else {
 		DISCONNECT = true
 		io.WriteString(W, "\nCouchbase query shell not connected to any endpoint. Use \\CONNECT command to connect.  ")
 	}
-	return nil
+	return 0, ""
 }
 
-func (this *Disconnect) PrintHelp(desc bool) {
-	io.WriteString(W, "\\DISCONNECT\n")
+func (this *Disconnect) PrintHelp(desc bool) (int, string) {
+	_, werr := io.WriteString(W, "\\DISCONNECT\n")
 	if desc {
-		printDesc(this.Name())
+		err_code, err_str := printDesc(this.Name())
+		if err_code != 0 {
+			return err_code, err_str
+		}
 	}
-	io.WriteString(W, "\n")
+	_, werr = io.WriteString(W, "\n")
+	if werr != nil {
+		return errors.WRITER_OUTPUT, werr.Error()
+	}
+	return 0, ""
 }
