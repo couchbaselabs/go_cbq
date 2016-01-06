@@ -33,7 +33,7 @@ func (this *Set) MinArgs() int {
 }
 
 func (this *Set) MaxArgs() int {
-	return 2
+	return MAX_ARGS
 }
 
 func (this *Set) ExecCommand(args []string) (int, string) {

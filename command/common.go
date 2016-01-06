@@ -11,6 +11,7 @@ package command
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"strconv"
 	"strings"
@@ -315,7 +316,11 @@ func PushOrSet(args []string, pushvalue bool) (int, string) {
 		vble := args[0]
 		vble = vble[2:]
 
-		err_code, err_str := PushValue_Helper(pushvalue, NamedParam, vble, args[1])
+		args_str := strings.Join(args[1:], " ")
+
+		fmt.Println("Debug args Push or Set ", args[1:])
+
+		err_code, err_str := PushValue_Helper(pushvalue, NamedParam, vble, args_str)
 		if err_code != 0 {
 			return err_code, err_str
 		}
@@ -325,7 +330,11 @@ func PushOrSet(args []string, pushvalue bool) (int, string) {
 			return err_code, err_str
 		}
 
+		fmt.Println("Debug args Push or Set Value ", v)
+
 		val := ValToStr(v)
+
+		fmt.Println("Debug args Push or Set String ", val)
 
 		vble = "$" + vble
 		go_n1ql.SetQueryParams(vble, val)
@@ -336,7 +345,11 @@ func PushOrSet(args []string, pushvalue bool) (int, string) {
 		vble := args[0]
 		vble = vble[1:]
 
-		err_code, err_str := PushValue_Helper(pushvalue, QueryParam, vble, args[1])
+		fmt.Println("Debug args Push or Set ", args[1:])
+
+		args_str := strings.Join(args[1:], " ")
+
+		err_code, err_str := PushValue_Helper(pushvalue, QueryParam, vble, args_str)
 
 		if err_code != 0 {
 			return err_code, err_str
@@ -362,6 +375,8 @@ func PushOrSet(args []string, pushvalue bool) (int, string) {
 				return errors.JSON_MARSHAL, ""
 			}
 
+			fmt.Println("Debug args Push or Set Value ", string(ac))
+
 			go_n1ql.SetQueryParams("creds", string(ac))
 
 		} else {
@@ -370,8 +385,11 @@ func PushOrSet(args []string, pushvalue bool) (int, string) {
 			if err_code != 0 {
 				return err_code, err_str
 			}
+			fmt.Println("Debug args Push or Set Value ", v)
 
 			val := ValToStr(v)
+
+			fmt.Println("Debug args Push or Set String ", val)
 
 			go_n1ql.SetQueryParams(vble, val)
 
@@ -383,7 +401,11 @@ func PushOrSet(args []string, pushvalue bool) (int, string) {
 		vble := args[0]
 		vble = vble[1:]
 
-		err_code, err_str := PushValue_Helper(pushvalue, UserDefSV, vble, args[1])
+		fmt.Println("Debug args Push or Set ", args[1:])
+
+		args_str := strings.Join(args[1:], " ")
+
+		err_code, err_str := PushValue_Helper(pushvalue, UserDefSV, vble, args_str)
 		if err_code != 0 {
 			return err_code, err_str
 		}
@@ -393,7 +415,9 @@ func PushOrSet(args []string, pushvalue bool) (int, string) {
 
 		vble := args[0]
 
-		err_code, err_str := PushValue_Helper(pushvalue, PreDefSV, vble, args[1])
+		args_str := strings.Join(args[1:], " ")
+
+		err_code, err_str := PushValue_Helper(pushvalue, PreDefSV, vble, args_str)
 		if err_code != 0 {
 			return err_code, err_str
 		}
@@ -405,60 +429,60 @@ func printDesc(cmdname string) (int, string) {
 	var werr error
 	switch cmdname {
 
-	case "ALIAS":
+	case ALIAS_CMD:
 		_, werr = io.WriteString(W, "Create an alias for input. <command> = <shell command> or <query statement>\n")
 		_, werr = io.WriteString(W, "\tExample : \n\t        \\ALIAS serverversion \"select version(), min_version()\" ;\n\t        \\ALIAS \"\\SET -max-parallelism 8\";\n")
 
-	case "CONNECT":
+	case CONNECT_CMD:
 		_, werr = io.WriteString(W, "Connect to the query service or cluster endpoint url.\n")
 		_, werr = io.WriteString(W, "Default : http://localhost:8091\n")
-		_, werr = io.WriteString(W, "\tExample : \n\t        \\CONNECT http://172.6.23.2:8091 ; \n\t         \\CONNECT https://my.secure.node.com:8093 ;\n")
+		_, werr = io.WriteString(W, "\tExample : \n\t        \\CONNECT http://172.6.23.2:8091 ; \n\t         \\CONNECT https://my.secure.node.com:18093 ;\n")
 
-	case "COPYRIGHT":
+	case COPYRIGHT_CMD:
 		_, werr = io.WriteString(W, "Print Couchbase Copyright information\n")
 		_, werr = io.WriteString(W, "\tExample : \n\t        \\COPYRIGHT;\n")
 
-	case "DISCONNECT":
+	case DISCONNECT_CMD:
 		_, werr = io.WriteString(W, "Disconnect from the query service or cluster endpoint url.\n")
 		_, werr = io.WriteString(W, "\tExample : \n\t        \\DISCONNECT;")
 
-	case "ECHO":
+	case ECHO_CMD:
 		_, werr = io.WriteString(W, "Echo the value of the input. <arg> = <prefix><name> (a parameter) or \n <arg> = <alias> (command alias) or \n <arg> = <input> (any input statement) \n")
 		_, werr = io.WriteString(W, "\tExample : \n\t        \\ECHO -$r ;\n\t        \\ECHO \\Com; \n")
 
-	case "EXIT":
+	case EXIT_CMD:
 		_, werr = io.WriteString(W, "Exit the shell\n")
 		_, werr = io.WriteString(W, "\tExample : \n\t        \\EXIT; \n\t        \\QUIT;\n")
 
-	case "HELP":
+	case HELP_CMD:
 		_, werr = io.WriteString(W, "The input arguments are shell commands. If a * is input then the command displays HELP information for all input shell commands.\n")
 		_, werr = io.WriteString(W, "\tExample : \n\t        \\HELP VERSION; \n\t        \\HELP EXIT DISCONNECT VERSION; \n\t        \\HELP;\n")
 
-	case "POP":
+	case POP_CMD:
 		_, werr = io.WriteString(W, "Pop the value of the given parameter from the input parameter stack. <parameter> = <prefix><name>\n")
 		_, werr = io.WriteString(W, "\tExample : \n\t        \\Pop -$r ;\n\t        \\Pop $Val ; \n\t        \\Pop ;\n")
 
-	case "PUSH":
+	case PUSH_CMD:
 		_, werr = io.WriteString(W, "Push the value of the given parameter to the input parameter stack. <parameter> = <prefix><name>\n")
 		_, werr = io.WriteString(W, "\tExample : \n\t        \\PUSH -$r 9.5 ;\n\t        \\PUSH $Val -$r; \n\t        \\PUSH ;\n")
 
-	case "SET":
+	case SET_CMD:
 		_, werr = io.WriteString(W, "Set the value of the given parameter to the input value. <parameter> = <prefix><name>\n")
 		_, werr = io.WriteString(W, "\tExample : \n\t        \\SET -$r 9.5 ;\n\t        \\SET $Val -$r ;\n")
 
-	case "SOURCE":
+	case SOURCE_CMD:
 		_, werr = io.WriteString(W, "Load input file into shell\n")
 		_, werr = io.WriteString(W, " For Example : \n\t \\SOURCE temp1.txt ;\n")
 
-	case "UNALIAS":
+	case UNALIAS_CMD:
 		_, werr = io.WriteString(W, "Delete the alias given by <alias name>.\n")
 		_, werr = io.WriteString(W, "\tExample : \n\t        \\UNALIAS serverversion;\n\t        \\UNALIAS subcommand1 subcommand2 serverversion;\n")
 
-	case "UNSET":
+	case UNSET_CMD:
 		_, werr = io.WriteString(W, "Unset the value of the given parameter. <parameter> = <prefix><name> \n")
 		_, werr = io.WriteString(W, "\tExample : \n\t        \\Unset -$r ;\n\t        \\Unset $Val ;\n")
 
-	case "VERSION":
+	case VERSION_CMD:
 		_, werr = io.WriteString(W, "Print the Shell Version\n")
 		_, werr = io.WriteString(W, "\tExample : \n\t        \\VERSION;\n")
 

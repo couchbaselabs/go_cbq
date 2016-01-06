@@ -58,6 +58,7 @@ func (this *Help) ExecCommand(args []string) (int, string) {
 		   need not contain the \ prefix. Return an error if the Command
 		   doesnt exist. */
 		for _, val := range args {
+			val = strings.ToLower(val)
 			if strings.HasPrefix(val, "\\") == false {
 				val = "\\" + val
 			}

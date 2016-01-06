@@ -33,7 +33,7 @@ func (this *Push) MinArgs() int {
 }
 
 func (this *Push) MaxArgs() int {
-	return 2
+	return MAX_ARGS
 }
 
 func (this *Push) ExecCommand(args []string) (int, string) {
