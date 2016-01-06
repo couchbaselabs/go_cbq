@@ -249,16 +249,6 @@ func main() {
 	flag.Parse()
 	command.W = os.Stdout
 
-	if scriptFlag != "" {
-		err_code, err_str := execute_input(scriptFlag, os.Stdout)
-		if err_code != 0 {
-			s_err := command.HandleError(err_code, err_str)
-			command.PrintError(s_err)
-			os.Exit(1)
-		}
-		os.Exit(0)
-	}
-
 	/* Handle options and what they should do */
 
 	// TODO : Readd ...
@@ -338,13 +328,17 @@ func main() {
 	   -user.
 	*/
 	if userFlag == "" && credsFlag == "" {
-		/* No credentials exist. This can still be used to connect to
-		   un-authenticated servers.
-		*/
-		_, werr := io.WriteString(command.W, "No Input Credentials. In order to connect to a server with authentication, please provide credentials.\n")
-		if werr != nil {
-			s_err := command.HandleError(errors.WRITER_OUTPUT, werr.Error())
-			command.PrintError(s_err)
+		// No credentials exist. This can still be used to connect to
+		// un-authenticated servers.
+		// Dont output the statement if we are running in single command
+		// mode.
+		if scriptFlag == "" {
+			_, werr := io.WriteString(command.W, "No Input Credentials. In order to connect to a server with authentication, please provide credentials.\n")
+
+			if werr != nil {
+				s_err := command.HandleError(errors.WRITER_OUTPUT, werr.Error())
+				command.PrintError(s_err)
+			}
 		}
 
 	} else if credsFlag != "" {
@@ -379,6 +373,17 @@ func main() {
 			os.Exit(1)
 		}
 		go_n1ql.SetQueryParams("creds", string(ac))
+	}
+
+	if scriptFlag != "" {
+		go_n1ql.SetPassthroughMode(true)
+		err_code, err_str := execute_input(scriptFlag, os.Stdout)
+		if err_code != 0 {
+			s_err := command.HandleError(err_code, err_str)
+			command.PrintError(s_err)
+			os.Exit(1)
+		}
+		os.Exit(0)
 	}
 
 	if timeoutFlag != "0ms" {
