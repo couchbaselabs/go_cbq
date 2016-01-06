@@ -352,7 +352,9 @@ func PushOrSet(args []string, pushvalue bool) (int, string) {
 
 			var creds Credentials
 
-			creds_ret, err_code, err_str := ToCreds(args[1])
+			args_str := strings.Join(args[1:], " ")
+
+			creds_ret, err_code, err_str := ToCreds(args_str)
 			if err_code != 0 {
 				return err_code, err_str
 			}
