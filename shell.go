@@ -108,7 +108,7 @@ func init() {
 		usage      = "Username \n\t For Example : -u=Administrator"
 	)
 	flag.StringVar(&userFlag, "user", defaultval, usage)
-	flag.StringVar(&userFlag, "u", defaultval, " Shorthand for -credentials")
+	flag.StringVar(&userFlag, "u", defaultval, " Shorthand for -user")
 
 }
 
@@ -285,7 +285,7 @@ func main() {
 
 	/* -quiet : Display Message only if flag not specified
 	 */
-	if !quietFlag {
+	if !quietFlag && NoQueryService == false {
 		s := fmt.Sprintln("Connect to " + ServerFlag + ". Type Ctrl-D to exit.\n")
 		_, werr := io.WriteString(command.W, s)
 		if werr != nil {

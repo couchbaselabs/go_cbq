@@ -293,6 +293,11 @@ func ToCreds(credsFlag string) (Credentials, int, string) {
 	*/
 	for _, i := range cred {
 		up := strings.Split(i, ":")
+
+		//Make sure there are no leading and trailing spaces
+		//when processing the username and password.
+		up[0] = strings.TrimSpace(up[0])
+		up[1] = strings.TrimSpace(up[1])
 		if len(up) < 2 {
 			// One of the input credentials is incorrect
 			return nil, errors.MISSING_CREDENTIAL, ""
@@ -355,6 +360,7 @@ func PushOrSet(args []string, pushvalue bool) (int, string) {
 			args_str := strings.Join(args[1:], " ")
 
 			creds_ret, err_code, err_str := ToCreds(args_str)
+
 			if err_code != 0 {
 				return err_code, err_str
 			}
@@ -377,7 +383,15 @@ func PushOrSet(args []string, pushvalue bool) (int, string) {
 				return err_code, err_str
 			}
 
-			val := ValToStr(v)
+			// When passing the query rest api parameter to go_n1ql
+			// we need to convert to string only if the value isnt
+			// already a string
+			var val string = ""
+			if v.Type() == value.STRING {
+				val = v.Actual().(string)
+			} else {
+				val = ValToStr(v)
+			}
 
 			go_n1ql.SetQueryParams(vble, val)
 
