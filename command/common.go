@@ -11,7 +11,6 @@ package command
 
 import (
 	"encoding/json"
-	"fmt"
 	"io"
 	"strconv"
 	"strings"
@@ -318,8 +317,6 @@ func PushOrSet(args []string, pushvalue bool) (int, string) {
 
 		args_str := strings.Join(args[1:], " ")
 
-		fmt.Println("Debug args Push or Set ", args[1:])
-
 		err_code, err_str := PushValue_Helper(pushvalue, NamedParam, vble, args_str)
 		if err_code != 0 {
 			return err_code, err_str
@@ -330,11 +327,7 @@ func PushOrSet(args []string, pushvalue bool) (int, string) {
 			return err_code, err_str
 		}
 
-		fmt.Println("Debug args Push or Set Value ", v)
-
 		val := ValToStr(v)
-
-		fmt.Println("Debug args Push or Set String ", val)
 
 		vble = "$" + vble
 		go_n1ql.SetQueryParams(vble, val)
@@ -344,8 +337,6 @@ func PushOrSet(args []string, pushvalue bool) (int, string) {
 
 		vble := args[0]
 		vble = vble[1:]
-
-		fmt.Println("Debug args Push or Set ", args[1:])
 
 		args_str := strings.Join(args[1:], " ")
 
@@ -375,8 +366,6 @@ func PushOrSet(args []string, pushvalue bool) (int, string) {
 				return errors.JSON_MARSHAL, ""
 			}
 
-			fmt.Println("Debug args Push or Set Value ", string(ac))
-
 			go_n1ql.SetQueryParams("creds", string(ac))
 
 		} else {
@@ -385,11 +374,8 @@ func PushOrSet(args []string, pushvalue bool) (int, string) {
 			if err_code != 0 {
 				return err_code, err_str
 			}
-			fmt.Println("Debug args Push or Set Value ", v)
 
 			val := ValToStr(v)
-
-			fmt.Println("Debug args Push or Set String ", val)
 
 			go_n1ql.SetQueryParams(vble, val)
 
@@ -400,8 +386,6 @@ func PushOrSet(args []string, pushvalue bool) (int, string) {
 		// For User defined session variables
 		vble := args[0]
 		vble = vble[1:]
-
-		fmt.Println("Debug args Push or Set ", args[1:])
 
 		args_str := strings.Join(args[1:], " ")
 
