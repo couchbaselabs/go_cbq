@@ -41,16 +41,23 @@ func (this *Help) ExecCommand(args []string) (int, string) {
 	/* Input Command : \HELP;
 	   Print Help information for all commands. */
 	if len(args) == 0 {
-		_, werr := io.WriteString(W, "Help Information for all Shell Commands")
+		_, werr := io.WriteString(W, "Help Information for all Shell Commands\n")
 		if werr != nil {
 			return errors.WRITER_OUTPUT, werr.Error()
 		}
+		num := 0
 
 		for _, val := range COMMAND_LIST {
+			//Since EXIT and QUIT map to the same message, print it just once.
+			if val.Name() == "EXIT" && num == 0 {
+				num = 1
+				continue
+			}
 			err_code, err_str := val.PrintHelp(false)
 			if err_code != 0 {
 				return err_code, err_str
 			}
+
 		}
 	} else {
 		/* Input Command : \HELP SET \VERSION;

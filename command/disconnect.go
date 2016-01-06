@@ -47,7 +47,7 @@ func (this *Disconnect) ExecCommand(args []string) (int, string) {
 
 	} else {
 		DISCONNECT = true
-		io.WriteString(W, "\nCouchbase query shell not connected to any endpoint. Use \\CONNECT command to connect.  ")
+		io.WriteString(W, "\nCouchbase query shell not connected to any endpoint. Use \\CONNECT command to connect.\n")
 	}
 	return 0, ""
 }
