@@ -10,6 +10,7 @@
 package command
 
 import (
+	"fmt"
 	"io"
 
 	"github.com/couchbase/query/errors"
@@ -40,13 +41,67 @@ func (this *Set) ExecCommand(args []string) (int, string) {
 	/* Command to set the value of the given parameter to
 	   the input value. The top value of the parameter stack
 	   is modified. If the command contains no input argument
-	   or more than 1 argument then throw an error.
+	   then display all the parameter stacks. If it has 1 input
+	   argument then throw error.
 	*/
 
 	if len(args) > this.MaxArgs() {
 		return errors.TOO_MANY_ARGS, ""
 	} else if len(args) < this.MinArgs() {
-		return errors.TOO_FEW_ARGS, ""
+		if len(args) == 0 {
+
+			//For \SET with no arguments display the values for
+			//all the parameter stacks. This includes the following :
+			// Query Parameters
+			// Session Paramters  : User Defined
+			// Session Parameters : Pre-defined
+			// Named Paramters
+
+			//Query Parameters
+			var valuestr string = ""
+			var werr error
+			io.WriteString(W, "Query Parameters :: \n")
+			for name, value := range QueryParam {
+				valuestr = fmt.Sprintln("Parameter name :", name, "Value ", *value)
+				_, werr = io.WriteString(W, valuestr)
+			}
+			_, werr = io.WriteString(W, "\n")
+
+			//Named Parameters
+			valuestr = ""
+			io.WriteString(W, "Named Parameters :: \n")
+			for name, value := range NamedParam {
+				valuestr = fmt.Sprintln("Parameter name :", name, "Value ", *value)
+				io.WriteString(W, valuestr)
+			}
+			_, werr = io.WriteString(W, "\n")
+
+			//User Defined Session Parameters
+			valuestr = ""
+			io.WriteString(W, "User Defined Session Parameters :: \n")
+			for name, value := range UserDefSV {
+				valuestr = fmt.Sprintln("Parameter name :", name, "Value ", *value)
+				io.WriteString(W, valuestr)
+			}
+			_, werr = io.WriteString(W, "\n")
+
+			//Predefined Session Parameters
+			valuestr = ""
+			io.WriteString(W, "Predefined Session Parameters :: \n")
+			for name, value := range PreDefSV {
+				valuestr = fmt.Sprintln("Parameter name :", name, "Value ", *value)
+				io.WriteString(W, valuestr)
+			}
+			_, werr = io.WriteString(W, "\n")
+
+			if werr != nil {
+				return errors.WRITER_OUTPUT, werr.Error()
+			}
+
+		} else {
+			return errors.TOO_FEW_ARGS, ""
+		}
+
 	} else {
 		//Check what kind of parameter needs to be set.
 		err_code, err_str := PushOrSet(args, true)
