@@ -207,6 +207,7 @@ func StrToVal(param string) (val value.Value) {
 func ValToStr(item value.Value) string {
 	//Call String() method in value.Value to convert
 	//value to string.
+
 	return item.String()
 }
 
@@ -271,6 +272,13 @@ func PopValue_Helper(unset bool, param map[string]*Stack, vble string) (err_code
 		//To pop a value from the input stack
 		if ok {
 			_, err_code, err_str = st_Val.Pop()
+
+			// If after popping the stack is now empty, then delete the stack.
+			// We dont need to check for stack empty here because ok will be false
+			// if the stack is empty. So it will return Parameter doesnt exist.
+			if st_Val.Len() == 0 {
+				delete(param, vble)
+			}
 		} else {
 			err_code = errors.NO_SUCH_PARAM
 			err_str = ""
@@ -356,9 +364,7 @@ func PushOrSet(args []string, pushvalue bool) (int, string) {
 			//   JSON object credentials
 
 			var creds Credentials
-
 			args_str := strings.Join(args[1:], " ")
-
 			creds_ret, err_code, err_str := ToCreds(args_str)
 
 			if err_code != 0 {
@@ -373,7 +379,6 @@ func PushOrSet(args []string, pushvalue bool) (int, string) {
 			if err != nil {
 				return errors.JSON_MARSHAL, ""
 			}
-
 			go_n1ql.SetQueryParams("creds", string(ac))
 
 		} else {

@@ -10,9 +10,12 @@
 package command
 
 import (
+	"encoding/json"
 	"io"
 
 	"github.com/couchbase/query/errors"
+	"github.com/couchbase/query/value"
+	go_n1ql "github.com/couchbaselabs/go_n1ql"
 )
 
 /* Push Command */
@@ -56,16 +59,17 @@ func (this *Push) ExecCommand(args []string) (int, string) {
 		*/
 
 		//Named Parameters
-		Pushparam_Helper(NamedParam)
+		Pushparam_Helper(NamedParam, true, true)
 
 		//Query Parameters
-		Pushparam_Helper(QueryParam)
+		Pushparam_Helper(QueryParam, true, false)
 
 		//User Defined Session Variables
-		Pushparam_Helper(UserDefSV)
+		Pushparam_Helper(UserDefSV, false, false)
 
-		//Predefined Session Variables
-		Pushparam_Helper(PreDefSV)
+		//Should not push predefined variables unless
+		//they are expicitely specified as an arg to PUSH.
+		//Pushparam_Helper(PreDefSV)
 
 	} else {
 		//Check what kind of parameter needs to be pushed.
@@ -95,13 +99,53 @@ func (this *Push) PrintHelp(desc bool) (int, string) {
 /* Push value from the Top of the stack onto the parameter stack.
    This is used by the \PUSH command with no arguments.
 */
-func Pushparam_Helper(param map[string]*Stack) (int, string) {
-	for _, v := range param {
+func Pushparam_Helper(param map[string]*Stack, isrestp bool, isnamep bool) (int, string) {
+	for name, v := range param {
 		t, err_code, err_string := v.Top()
 		if err_code != 0 {
 			return err_code, err_string
 		}
 		v.Push(t)
+
+		// When passing the query rest api parameter to go_n1ql
+		// we need to convert to string only if the value isnt
+		// already a string
+
+		if isrestp == true {
+			var val string = ""
+			if t.Type() == value.STRING {
+				val = t.Actual().(string)
+			} else {
+				val = ValToStr(t)
+			}
+
+			if isnamep == true {
+				name = "$" + name
+			} else {
+				//We know it is a query credential
+				if name == "creds" {
+					// Define credentials as user/pass and convert into
+					// JSON object credentials
+
+					var creds Credentials
+					creds_ret, err_code, err_str := ToCreds(val)
+					if err_code != 0 {
+						return err_code, err_str
+					}
+
+					for _, v := range creds_ret {
+						creds = append(creds, v)
+					}
+
+					ac, err := json.Marshal(creds)
+					if err != nil {
+						return errors.JSON_MARSHAL, ""
+					}
+					val = string(ac)
+				}
+			}
+			go_n1ql.SetQueryParams(name, val)
+		}
 	}
 	return 0, ""
 }

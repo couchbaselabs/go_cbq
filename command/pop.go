@@ -10,10 +10,13 @@
 package command
 
 import (
+	"encoding/json"
 	"io"
 	"strings"
 
 	"github.com/couchbase/query/errors"
+	"github.com/couchbase/query/value"
+	go_n1ql "github.com/couchbaselabs/go_n1ql"
 )
 
 /* Pop Command */
@@ -52,16 +55,17 @@ func (this *Pop) ExecCommand(args []string) (int, string) {
 		*/
 
 		//Named Parameters
-		Popparam_Helper(NamedParam)
+		Popparam_Helper(NamedParam, true, true)
 
 		//Query Parameters
-		Popparam_Helper(QueryParam)
+		Popparam_Helper(QueryParam, true, false)
 
 		//User Defined Session Variables
-		Popparam_Helper(UserDefSV)
+		Popparam_Helper(UserDefSV, false, false)
 
-		//Predefined Session Variables
-		Popparam_Helper(PreDefSV)
+		//Should not pop predefined variables unless
+		//they are expicitely specified as an arg to POP.
+		//Popparam_Helper(PreDefSV, false)
 
 	} else {
 		//Check what kind of parameter needs to be popped
@@ -76,6 +80,23 @@ func (this *Pop) ExecCommand(args []string) (int, string) {
 				return err_code, err_string
 			}
 
+			st_val, ok := NamedParam[vble]
+
+			if ok {
+				if NamedParam[vble].Len() == 0 {
+					go_n1ql.UnsetQueryParams(vble)
+				} else {
+					name := "$" + vble
+					err_code, err_str := setNewParamPop(name, st_val)
+					if err_code != 0 {
+						return err_code, err_str
+					}
+				}
+
+			} else {
+				go_n1ql.UnsetQueryParams(vble)
+			}
+
 		} else if strings.HasPrefix(args[0], "-") {
 			// For query parameters
 			vble := args[0]
@@ -84,6 +105,22 @@ func (this *Pop) ExecCommand(args []string) (int, string) {
 			err_code, err_string := PopValue_Helper(false, QueryParam, vble)
 			if err_code != 0 {
 				return err_code, err_string
+			}
+
+			st_val, ok := QueryParam[vble]
+
+			if ok {
+				if QueryParam[vble].Len() == 0 {
+					go_n1ql.UnsetQueryParams(vble)
+				} else {
+					err_code, err_str := setNewParamPop(vble, st_val)
+					if err_code != 0 {
+						return err_code, err_str
+					}
+				}
+
+			} else {
+				go_n1ql.UnsetQueryParams(vble)
 			}
 
 		} else if strings.HasPrefix(args[0], "$") {
@@ -127,12 +164,64 @@ func (this *Pop) PrintHelp(desc bool) (int, string) {
 /* Pop the top value of the parameter stack.
    This is used by the \POP command with no arguments.
 */
-func Popparam_Helper(param map[string]*Stack) (int, string) {
-	for _, v := range param {
-		_, err_code, err_str := v.Pop()
+func Popparam_Helper(param map[string]*Stack, isrestp bool, isnamep bool) (int, string) {
+	for name, val := range param {
+		_, err_code, err_str := val.Pop()
+
+		if isrestp == true && val.Len() == 0 {
+			delete(param, name)
+			go_n1ql.UnsetQueryParams(name)
+		}
+
 		if err_code != 0 {
 			return err_code, err_str
 		}
+
+		if isrestp == true && val.Len() != 0 {
+			if isnamep == true {
+				name = "$" + name
+			}
+			err_code, err_str = setNewParamPop(name, val)
+			if err_code != 0 {
+				return err_code, err_str
+			}
+		}
 	}
+	return 0, ""
+}
+
+func setNewParamPop(name string, paramst *Stack) (int, string) {
+	newval, err_code, err_str := paramst.Top()
+	if err_code != 0 {
+		return err_code, err_str
+	}
+	var nval string = ""
+	if newval.Type() == value.STRING {
+		nval = newval.Actual().(string)
+	} else {
+		nval = ValToStr(newval)
+	}
+
+	if name == "creds" {
+		// Define credentials as user/pass and convert into
+		// JSON object credentials
+
+		var creds Credentials
+		creds_ret, err_code, err_str := ToCreds(nval)
+		if err_code != 0 {
+			return err_code, err_str
+		}
+
+		for _, v := range creds_ret {
+			creds = append(creds, v)
+		}
+
+		ac, err := json.Marshal(creds)
+		if err != nil {
+			return errors.JSON_MARSHAL, ""
+		}
+		nval = string(ac)
+	}
+	go_n1ql.SetQueryParams(name, nval)
 	return 0, ""
 }
